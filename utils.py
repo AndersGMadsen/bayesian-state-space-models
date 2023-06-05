@@ -57,7 +57,7 @@ def generate_trajectory_nonlinear():
     # Generate data with nonlinear true path and nonlinear observations
     x = np.array([0, 0, 1, 1])
     true_trajectory = [x]
-    noisy_observations = [x[:2]]
+    noisy_observations = [h(x) + mvn([0, 0], R)]
 
     for _ in range(N):
         x = f(x) + mvn([0, 0, 0, 0], Q)
