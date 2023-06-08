@@ -92,7 +92,7 @@ def get_sigmas(mean, cov, alpha, kappa, method='merwe'):
         I = np.sqrt(n)*Istar
         scaled_unitary = U.dot(I)
 
-        mean = np.array(mean).reshape(2, 1) 
+        mean = np.array(mean).reshape(n, 1) 
         sigmas = np.subtract(mean, -scaled_unitary).T   
 
     else:
