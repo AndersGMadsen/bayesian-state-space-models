@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 from scipy.stats.mstats import mquantiles
 import matplotlib.patches as patches
 
-from scipy.linalg import eigh
+from scipy.linalg import eigh, cholesky, sqrtm
 from scipy.stats import chi2
 
 
@@ -17,6 +17,7 @@ from scipy.stats import chi2
 
 
 def get_weights(n, alpha=0.5, beta=2, kappa=0, method='merwe'):
+
 
     if method == 'merwe':
          
@@ -49,6 +50,12 @@ def get_weights(n, alpha=0.5, beta=2, kappa=0, method='merwe'):
 
 def get_sigmas(mean, cov, alpha, kappa, method='merwe'):
 
+    def sqrt(A):
+        try:
+            return cholesky(A)
+        except np.linalg.LinAlgError:
+            return sqrtm(A)
+
     n = len(mean)
 
     if method in ['merwe', 'julier']:
@@ -58,11 +65,11 @@ def get_sigmas(mean, cov, alpha, kappa, method='merwe'):
         if method == 'merwe':
 
             lambda_ = alpha**2 * (n + kappa) - n
-            U = np.linalg.cholesky((n + lambda_) * cov)
+            U = sqrt((n + lambda_) * cov)
 
         elif method == 'julier':
                  
-            U = np.linalg.cholesky((n + kappa) * cov)
+            U = sqrt((n + kappa) * cov)
 
         sigmas[0] = mean
         for i in range(n):
@@ -73,7 +80,7 @@ def get_sigmas(mean, cov, alpha, kappa, method='merwe'):
 
         lambda_ = n / (n + 1)
 
-        U = np.linalg.cholesky(cov)
+        U = sqrt(cov)
 
         Istar = np.array([[-1/np.sqrt(2*lambda_), 1/np.sqrt(2*lambda_)]])
 
