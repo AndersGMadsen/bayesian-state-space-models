@@ -129,7 +129,7 @@ class EKF:
     
 # Unscented Kalman Filter (merwe)
 class UKF:
-    def __init__(self, f, Q, h, R, dim_m = 4, dim_y = 2, alpha=0.5, beta=2, kappa=0):
+    def __init__(self, f, h, Q, R, dim_m = 4, dim_y = 2, alpha=0.5, beta=2, kappa=0):
         self.f = f
         self.Q = Q
         self.h = h
