@@ -152,38 +152,38 @@ class UFK:
         
         return Wm, Wc
 
-    def sigmas(self, n, m, P):
+    def sigma_points(self, n, m, P):
 
-        sigmas = np.empty((2*n + 1, n))
+        sigma_points = np.empty((2*n + 1, n))
 
         lambda_ = self.alpha**2 * (n + self.kappa) - n
         U = cholesky((n + lambda_) * P)
 
-        sigmas[0] = m
+        sigma_points[0] = m
         for i in range(n):
-            sigmas[i + 1] = m + U[i]
-            sigmas[n + i + 1] = m - U[i]
+            sigma_points[i + 1] = m + U[i]
+            sigma_points[n + i + 1] = m - U[i]
 
-        return sigmas
+        return sigma_points
 
     def predict(self, m, P, Wm, Wc):
         
-        sigmas = self.sigmas(self.dim_m, m, P)
-        sigmas_transformed = np.array([self.f(sigma) for sigma in sigmas])
+        sigma_points = self.sigma_points(self.dim_m, m, P)
+        sigma_points_transformed = np.array([self.f(sigma) for sigma in sigma_points])
         
-        m_pred = np.sum(Wm[:, None] * sigmas_transformed, axis=0)
-        P_pred = np.sum([Wc[i] * np.outer(sigmas_transformed[i] - m_pred, sigmas_transformed[i] - m_pred) for i in range(len(Wc))], axis=0) + self.Q
+        m_pred = np.sum(Wm[:, None] * sigma_points_transformed, axis=0)
+        P_pred = np.sum([Wc[i] * np.outer(sigma_points_transformed[i] - m_pred, sigma_points_transformed[i] - m_pred) for i in range(len(Wc))], axis=0) + self.Q
 
         return m_pred, P_pred
 
     def update(self, m_pred, P_pred, y, Wm, Wc):
 
-        sigmas = self.sigmas(self.dim_m, m_pred, P_pred)
-        sigmas_transformed = np.array([self.h(sigma) for sigma in sigmas])
+        sigma_points = self.sigma_points(self.dim_m, m_pred, P_pred)
+        sigma_points_transformed = np.array([self.h(sigma) for sigma in sigma_points])
         
-        y_pred = np.sum(Wm[:, None] * sigmas_transformed, axis=0)
-        S = np.sum([Wc[i] * np.outer(sigmas_transformed[i] - y_pred, sigmas_transformed[i] - y_pred) for i in range(len(Wc))], axis=0) + self.R
-        C = np.sum([Wc[i] * np.outer(sigmas[i] - m_pred, sigmas_transformed[i] - y_pred) for i in range(len(Wc))], axis=0)
+        y_pred = np.sum(Wm[:, None] * sigma_points_transformed, axis=0)
+        S = np.sum([Wc[i] * np.outer(sigma_points_transformed[i] - y_pred, sigma_points_transformed[i] - y_pred) for i in range(len(Wc))], axis=0) + self.R
+        C = np.sum([Wc[i] * np.outer(sigma_points[i] - m_pred, sigma_points_transformed[i] - y_pred) for i in range(len(Wc))], axis=0)
 
         K = C @ np.linalg.inv(S)
         
@@ -225,12 +225,12 @@ class UFK:
             m = state_estimates[k]
             P = cov_estimates[k]
 
-            sigmas = self.sigmas(self.dim_m, m, P)
-            sigmas_transformed = np.array([self.f(sigma) for sigma in sigmas])
+            sigma_points = self.sigma_points(self.dim_m, m, P)
+            sigma_points_transformed = np.array([self.f(sigma) for sigma in sigma_points])
 
-            m_pred = np.sum(Wm[:, None] * sigmas_transformed, axis=0)
-            P_pred = np.sum([Wc[i] * np.outer(sigmas_transformed[i] - m_pred, sigmas_transformed[i] - m_pred) for i in range(len(Wc))], axis=0) + self.Q
-            D = np.sum([Wc[i] * np.outer(sigmas[i] - m, sigmas_transformed[i] - m_pred) for i in range(len(Wc))], axis=0)
+            m_pred = np.sum(Wm[:, None] * sigma_points_transformed, axis=0)
+            P_pred = np.sum([Wc[i] * np.outer(sigma_points_transformed[i] - m_pred, sigma_points_transformed[i] - m_pred) for i in range(len(Wc))], axis=0) + self.Q
+            D = np.sum([Wc[i] * np.outer(sigma_points[i] - m, sigma_points_transformed[i] - m_pred) for i in range(len(Wc))], axis=0)
             G = D @ np.linalg.inv(P_pred)
 
             state_estimates_smoothed[k] = m + G @ (state_estimates_smoothed[k + 1] - m_pred)
