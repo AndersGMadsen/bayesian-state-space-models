@@ -127,7 +127,7 @@ class EKF:
             
         return state_estimates_smoothed, cov_estimates_smoothed
     
-
+# Unscented Kalman Filter (merwe)
 class UFK:
     def __init__(self, f, Q, h, R, dim_m = 4, dim_y = 2, alpha=0.5, beta=2, kappa=0):
         self.f = f
@@ -201,7 +201,7 @@ class UFK:
 
         if m is None: m = np.zeros(self.dim_m)
         if P is None: P = np.eye(self.dim_m)
-        
+
         state_estimates = np.empty((n_measurements, self.dim_m))
         cov_estimates = np.empty((n_measurements, self.dim_m, self.dim_m))
 
