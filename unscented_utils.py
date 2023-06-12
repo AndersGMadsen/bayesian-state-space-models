@@ -1,6 +1,3 @@
-from filterpy.kalman import unscented_transform as ut
-from filterpy.kalman import MerweScaledSigmaPoints, JulierSigmaPoints, SimplexSigmaPoints
-
 import scipy.stats as stats
 import numpy as np
 from numpy.random import multivariate_normal
@@ -13,11 +10,31 @@ from scipy.linalg import eigh, cholesky, sqrtm
 from scipy.stats import chi2
 
 
-
-
-
 def get_weights(n, alpha=0.5, beta=2, kappa=0, method='merwe'):
 
+    """ 
+    Returns the weights for the unscented transform
+
+    Parameters
+    ----------
+    n : int
+        Dimension of the state space
+    alpha : float
+        Spread of the sigma points around the mean
+    beta : float
+        Incorporates prior knowledge of the distribution of the mean
+    kappa : float   
+        Secondary scaling parameter
+    method : str
+        Method to compute the weights (merwe, julier, simplex)
+
+    Returns
+    -------
+    Wm : numpy array
+        Weights for the mean
+    Wc : numpy array
+        Weights for the covariance
+    """
 
     if method == 'merwe':
          
@@ -47,8 +64,29 @@ def get_weights(n, alpha=0.5, beta=2, kappa=0, method='merwe'):
     return Wm, Wc
 
 
-
 def get_sigmas(mean, cov, alpha, kappa, method='merwe'):
+
+    """
+    Returns the sigma points for the unscented transform
+
+    Parameters
+    ----------
+    mean : numpy array
+        Mean of the state
+    cov : numpy array
+        Covariance of the state
+    alpha : float
+        Spread of the sigma points around the mean
+    kappa : float
+        Secondary scaling parameter
+    method : str
+        Method to construct the sigma points (merwe, julier, simplex)
+
+    Returns
+    -------
+    sigmas : numpy array
+        Sigma points
+    """
 
     def sqrt(A):
         try:
@@ -101,8 +139,39 @@ def get_sigmas(mean, cov, alpha, kappa, method='merwe'):
     return sigmas
 
 
-
 def unscented_transform(mean, cov, f, alpha=.5, beta=2, kappa=0, method='merwe'):
+
+    """
+    Returns the unscented transform of a function
+
+    Parameters
+    ----------
+    mean : numpy array
+        Mean of the state
+    cov : numpy array
+        Covariance of the state
+    f : function
+        Non-linear transformation function
+    alpha : float
+        Spread of the sigma points around the mean
+    beta : float
+        Incorporates prior knowledge of the distribution of the mean
+    kappa : float
+        Secondary scaling parameter
+    method : str
+        Method to construct the sigma points (merwe, julier, simplex)
+
+    Returns
+    -------
+    mean : numpy array
+        Mean of the transformed function
+    cov : numpy array
+        Covariance of the transformed function
+    sigmas : numpy array
+        Sigma points
+    sigmas_f : numpy array
+        Sigma points transformed
+    """
 
     n = len(mean)
 
@@ -125,8 +194,26 @@ def unscented_transform(mean, cov, f, alpha=.5, beta=2, kappa=0, method='merwe')
     return mean, cov, sigmas, sigmas_f
 
 
-
 def illustrate_unscented_transform(ut_dict, xs, ys, xs_nl, ys_nl, title='title'):
+
+    """
+    Illustrates the unscented transform
+
+    Parameters
+    ----------
+    ut_dict : dict
+        Dictionary containing the unscented transform
+    xs : numpy array
+        x coordinates of the points
+    ys : numpy array
+        y coordinates of the points
+    xs_nl : numpy array
+        x coordinates of the transformed points
+    ys_nl : numpy array
+        y coordinates of the transformed points
+    title : str
+        Title of the plot
+    """
 
     def get_ellipsis(cov):
 
