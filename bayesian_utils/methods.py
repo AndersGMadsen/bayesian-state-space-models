@@ -129,7 +129,7 @@ class EKF:
     
 # Unscented Kalman Filter (merwe)
 class UKF:
-    def __init__(self, f, Q, h, R, dim_m = 4, dim_y = 2, alpha=0.5, beta=2, kappa=0):
+    def __init__(self, f, h, Q, R, dim_m = 4, dim_y = 2, alpha=0.5, beta=2, kappa=0):
         self.f = f
         self.Q = Q
         self.h = h
@@ -227,7 +227,7 @@ class UKF:
 
         Wm, Wc = self.weights(self.dim_m)
 
-        for k in range(n- 2, -1, -1):
+        for k in range(n - 2, -1, -1):
             m = state_estimates[k]
             P = cov_estimates[k]
 
