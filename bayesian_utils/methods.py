@@ -128,7 +128,7 @@ class EKF:
         return state_estimates_smoothed, cov_estimates_smoothed
     
 # Unscented Kalman Filter (merwe)
-class UFK:
+class UKF:
     def __init__(self, f, Q, h, R, dim_m = 4, dim_y = 2, alpha=0.5, beta=2, kappa=0):
         self.f = f
         self.Q = Q
