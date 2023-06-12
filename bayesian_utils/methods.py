@@ -227,7 +227,7 @@ class UKF:
 
         Wm, Wc = self.weights(self.dim_m)
 
-        for k in range(n- 2, -1, -1):
+        for k in range(n - 2, -1, -1):
             m = state_estimates[k]
             P = cov_estimates[k]
 
