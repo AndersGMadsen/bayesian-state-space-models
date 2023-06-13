@@ -127,9 +127,9 @@ class EKF:
             
         return state_estimates_smoothed, cov_estimates_smoothed
     
-# Unscented Kalman Filter (merwe)
+# Unscented Kalman Filter (UKF)
 class UKF:
-    def __init__(self, f, h, Q, R, dim_m = 4, dim_y = 2, alpha=0.5, beta=2, kappa=0):
+    def __init__(self, f, h, Q, R, dim_m = 4, dim_y = 2, alpha=0.5, beta=2, kappa=0, method='merwe'):
         self.f = f
         self.Q = Q
         self.h = h
@@ -139,19 +139,29 @@ class UKF:
         self.alpha = alpha
         self.beta = beta
         self.kappa = kappa
+        self.method = method
         
         assert Q.shape == (dim_m, dim_m)
         assert R.shape == (dim_y, dim_y)
 
     def weights(self, n):
+
+        if self.method == 'merwe':
             
-        lambda_ = self.alpha**2 * (n + self.kappa) - n
+            lambda_ = self.alpha**2 * (n + self.kappa) - n
 
-        Wc = np.full(2*n + 1, 1 / (2*(n + lambda_)))
-        Wm = Wc.copy()
+            Wc = np.full(2*n + 1, 1 / (2*(n + lambda_)))
+            Wm = Wc.copy()
 
-        Wc[0] = lambda_ / (n + lambda_) + (1 - self.alpha**2 + self.beta)
-        Wm[0] = lambda_ / (n + lambda_)
+            Wc[0] = lambda_ / (n + lambda_) + (1 - self.alpha**2 + self.beta)
+            Wm[0] = lambda_ / (n + lambda_)
+
+        elif self.method == 'julier':
+
+            Wm = np.full(2*n + 1, 1 / (2*(n + self.kappa)))
+            Wm[0] = self.kappa / (n + self.kappa)
+
+            Wc = Wm.copy()
         
         return Wm, Wc
 
@@ -159,8 +169,14 @@ class UKF:
 
         sigma_points = np.empty((2*n + 1, n))
 
-        lambda_ = self.alpha**2 * (n + self.kappa) - n
-        U = cholesky((n + lambda_) * P)
+        if self.method == 'merwe':
+
+            lambda_ = self.alpha**2 * (n + self.kappa) - n
+            U = cholesky((n + lambda_) * P)
+
+        elif self.method == 'julier':
+                
+            U = cholesky((n + self.kappa) * P)
 
         sigma_points[0] = m
         for i in range(n):
