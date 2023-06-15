@@ -4,7 +4,7 @@ Inspirations from: Atsushi Sakai (@Atsushi_twi)
 
 import numpy as np
 import cvxpy
-from tqdm import tqdm
+from tqdm.autonotebook import tqdm
 # Ignore warnings
 import warnings
 warnings.filterwarnings("ignore")
@@ -73,7 +73,7 @@ def plot_car(ax, x, y, yaw, steer=0.0, truckcolor="-k"):
 
 class Vehicle:
     MAX_STEER = np.radians(45.0)  # maximum steering angle [rad]
-    MAX_DSTEER = np.radians(15.0)  #np.radians(30.0)  # maximum steering speed [rad/s]
+    MAX_DSTEER = np.radians(25.0)  #np.radians(30.0)  # maximum steering speed [rad/s]
     MAX_SPEED = 55.0 / 3.6  # maximum speed [m/s]
     MIN_SPEED = -20.0 / 3.6  # minimum speed [m/s]
     MAX_ACCEL = 1.0  # maximum accel [m/ss]
@@ -268,8 +268,9 @@ class Simulation:
 
         return angle
         
-    def simulate(self, cx, cy, cyaw, ck, dl):
-        sp = self.calc_speed_profile(cx, cy, cyaw)
+    def simulate(self, cx, cy, cyaw, ck, dl, sp = None):
+        if sp is None:
+            sp = self.calc_speed_profile(cx, cy, cyaw)
         goal = [cx[-1], cy[-1]]
 
         # initial yaw compensation
@@ -342,9 +343,12 @@ class Simulation:
         d = d[:i]
         a = a[:i]
         target_inds = target_inds[:i]
-        xrefs = xrefs[:i]
+        xrefs = np.array(xrefs[:i])
+        
+        state_history = dict(t = time, x = x, y = y, v = v, yaw = yaw)
+        control_history = dict(a = a, d = d, target_inds = target_inds, xrefs = xrefs)
 
-        return time, x, y, yaw, v, d, a, target_inds, xrefs
+        return state_history, control_history
         
     def calc_nearest_index(self, state, cx, cy, cyaw, pind):
         dx = np.array(cx[pind:(pind + self.N_IND_SEARCH)]) - state.x
@@ -406,10 +410,9 @@ class Simulation:
             if dx != 0.0 and dy != 0.0:
                 dangle = np.abs(self.pi_2_pi(np.arctan2(dy, dx) - cyaw[i]))
                 if dangle >= np.pi / 4.0:
-                    speed_profile[i] = - self.target_speed
-                    continue
-            
-            speed_profile[i] = self.target_speed
+                    speed_profile[i] = -self.target_speed
+                else:
+                    speed_profile[i] = self.target_speed
 
         speed_profile[-1] = 0.0
 
