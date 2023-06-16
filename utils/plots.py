@@ -59,7 +59,14 @@ class PlotAnimation:
         self.ax = self.fig.add_subplot(self.gs[1, 0])
         self.ax.plot(states[0, 0], states[0, 1], 'x', color='k', label="Start")
         self.ax.plot(states[:, 0], states[:, 1], '--', color='r', label="True trajectory")
-        self.ax.plot(measurements[:, 0], measurements[:, 1], '.', color='orange', label="Noisy observations")
+
+        self.filter_points, = self.ax.plot([], [], '.', color='orange',label="Noisy observations (original)")
+        self.smoother_points, = self.ax.plot([], [], '.', color='red', label="Noisy observations (after smoothing)")
+
+        self.ax.hlines(1, 1, 45, color='k', linestyle='solid', linewidth=1)
+        self.ax.hlines(5, 1, 40, color='k', linestyle='solid', linewidth=1)
+        self.ax.vlines(45, 1, 20, color='k', linestyle='solid', linewidth=1)
+        self.ax.vlines(40, 5, 20, color='k', linestyle='solid', linewidth=1)
 
         self.ax_histx = self.fig.add_subplot(self.gs[0, 0], sharex=self.ax)
         self.ax_histy = self.fig.add_subplot(self.gs[1, 1], sharey=self.ax)
@@ -107,20 +114,19 @@ class PlotAnimation:
         return self.ax,
 
     def update_filter(self, frame):
-        self.ax.plot(self.measurements[frame, 0], self.measurements[frame, 1], '.', color='orange',
-                     label="Noisy observations")
-        
+                
         conf_ellipse(self.ax, self.state_estimates[frame, :2], self.cov_estimates[frame, :2, :2])
 
         self.update_trajectory(frame)
         self.update_histogram(frame)
+
+        #self.ax.plot(self.measurements[frame, 0], self.measurements[frame, 1], '.', color='orange',label="Noisy observations")
+        self.filter_points.set_data(self.measurements[:frame, 0], self.measurements[:frame, 1])
         
         return self.ax,
 
     def update_smoother(self, frame):
         frame = frame - len(self.state_estimates)
-        self.ax.plot(self.measurements[frame, 0], self.measurements[frame, 1], '.', color='orange',
-                     label="Noisy observations")
 
         self.state_estimates[-frame:] = self.state_estimates_smoothed[-frame:]
         self.cov_estimates[-frame:] = self.cov_estimates_smoothed[-frame:]
@@ -128,6 +134,9 @@ class PlotAnimation:
         conf_ellipse(self.ax, self.state_estimates[frame, :2], self.cov_estimates[frame, :2, :2])
 
         self.update_trajectory(len(self.state_estimates) - 1)
+
+        self.filter_points.set_data(self.measurements[:-frame, 0], self.measurements[:-frame, 1])
+        self.smoother_points.set_data(self.measurements[-frame:, 0], self.measurements[-frame:, 1])
 
         frame = -frame - 1
         self.update_histogram(frame)
@@ -148,3 +157,5 @@ class PlotAnimation:
                 self.fig, self.update, frames=range(0, 2 * len(self.state_estimates)), init_func=self.init
             )
             ani.save(f'{self.name}.gif', writer='Pillow', fps=20, progress_callback=lambda i, n: pbar.update())
+
+        plt.close()
