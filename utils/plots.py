@@ -1,8 +1,10 @@
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.patches import Ellipse
+import matplotlib.animation as animation
+from tqdm.auto import tqdm
 from scipy.linalg import eigh
-from scipy.stats import chi2
+from scipy.stats import chi2, norm
 
 cornflowerblue_alpha = (0.39215686274509803, 0.5843137254901961, 0.9294117647058824, 0.3)
 
@@ -31,3 +33,118 @@ def plot_trajectory(ax, states, cov_estimates, label, color='cornflowerblue', al
     ax.plot(states[:, 0], states[:, 1], label=label, color=color)
     for i in range(len(states)):
         conf_ellipse(ax, states[i, :2,], cov_estimates[i, :2, :2], alpha=alpha)
+
+
+
+
+
+class PlotAnimation:
+
+    def __init__(self, states, measurements, state_estimates, cov_estimates, state_estimates_smoothed, cov_estimates_smoothed, name="animation"):
+        self.states = states
+        self.measurements = measurements
+        self.state_estimates = state_estimates.copy()
+        self.cov_estimates = cov_estimates.copy()
+        self.state_estimates_smoothed = state_estimates_smoothed
+        self.cov_estimates_smoothed = cov_estimates_smoothed
+        self.name = name
+
+        self.fig = plt.figure(figsize=(16, 6))
+        self.gs = self.fig.add_gridspec(
+            2, 2, width_ratios=(4, 1), height_ratios=(1, 4),
+            left=0.1, right=0.9, bottom=0.1, top=0.9,
+            wspace=0.05, hspace=0.05
+        )
+
+        self.ax = self.fig.add_subplot(self.gs[1, 0])
+        self.ax.plot(states[0, 0], states[0, 1], 'x', color='k', label="Start")
+        self.ax.plot(states[:, 0], states[:, 1], '--', color='r', label="True trajectory")
+        self.ax.plot(measurements[:, 0], measurements[:, 1], '.', color='orange', label="Noisy observations")
+
+        self.ax_histx = self.fig.add_subplot(self.gs[0, 0], sharex=self.ax)
+        self.ax_histy = self.fig.add_subplot(self.gs[1, 1], sharey=self.ax)
+        self.line, = self.ax.plot([], [], '-', color='black', label="Estimated trajectory")
+        self.mse_text = self.fig.text(0.75, 0.75, '', transform=self.fig.transFigure, fontsize=12)
+
+        self.ax_histx.tick_params(axis="x", labelbottom=False)
+        self.ax_histy.tick_params(axis="y", labelleft=False)
+
+    def update_trajectory(self, frame):
+        self.line.set_xdata(self.state_estimates[:frame, 0])
+        self.line.set_ydata(self.state_estimates[:frame, 1])
+
+        if frame > 0:
+            mse = np.mean((self.states[:frame, :2] - self.state_estimates[:frame, :2]) ** 2)
+            self.mse_text.set_text(f'MSE: {mse:.2f}')
+
+    def update_histogram(self, frame):
+        self.ax_histx.clear()
+        self.ax_histy.clear()
+        self.ax_histx.set_ylim(0, 1.5)
+        self.ax_histy.set_xlim(0, 1.5)
+
+        tmp_x = np.linspace(
+            self.state_estimates[frame, 0] - 3 * np.sqrt(self.cov_estimates[frame, 0, 0]),
+            self.state_estimates[frame, 0] + 3 * np.sqrt(self.cov_estimates[frame, 0, 0]), 100
+        )
+
+        self.ax_histx.plot(
+            tmp_x, norm.pdf(tmp_x, self.state_estimates[frame, 0], np.sqrt(self.cov_estimates[frame, 0, 0])), color='black')
+
+        tmp_y = np.linspace(
+            self.state_estimates[frame, 1] - 3 * np.sqrt(self.cov_estimates[frame, 1, 1]),
+            self.state_estimates[frame, 1] + 3 * np.sqrt(self.cov_estimates[frame, 1, 1]), 100
+        )
+
+        self.ax_histy.plot(
+            norm.pdf(tmp_y, self.state_estimates[frame, 1], np.sqrt(self.cov_estimates[frame, 1, 1])), tmp_y, color='black')
+
+    def init(self):
+        self.ax.set_xlim(int(np.min(self.measurements[:, 0]) - 5), int(np.max(self.measurements[:, 0] + 5)))
+        self.ax.set_ylim(int(np.min(self.measurements[:, 1]) - 5), int(np.max(self.measurements[:, 1] + 5)))
+        self.ax_histx.set_ylim(0, 1.0)
+        self.ax_histy.set_xlim(0, 1.0)
+        return self.ax,
+
+    def update_filter(self, frame):
+        self.ax.plot(self.measurements[frame, 0], self.measurements[frame, 1], '.', color='orange',
+                     label="Noisy observations")
+        
+        conf_ellipse(self.ax, self.state_estimates[frame, :2], self.cov_estimates[frame, :2, :2])
+
+        self.update_trajectory(frame)
+        self.update_histogram(frame)
+        
+        return self.ax,
+
+    def update_smoother(self, frame):
+        frame = frame - len(self.state_estimates)
+        self.ax.plot(self.measurements[frame, 0], self.measurements[frame, 1], '.', color='orange',
+                     label="Noisy observations")
+
+        self.state_estimates[-frame:] = self.state_estimates_smoothed[-frame:]
+        self.cov_estimates[-frame:] = self.cov_estimates_smoothed[-frame:]
+
+        conf_ellipse(self.ax, self.state_estimates[frame, :2], self.cov_estimates[frame, :2, :2])
+
+        self.update_trajectory(len(self.state_estimates) - 1)
+
+        frame = -frame - 1
+        self.update_histogram(frame)
+
+        return self.ax,
+
+    def update(self, frame):
+        if frame < len(self.state_estimates):
+            ax = self.update_filter(frame)
+        else:
+            ax = self.update_smoother(frame - len(self.state_estimates))
+
+        return ax,
+
+    def animate(self):
+        with tqdm(total=2 * len(self.state_estimates)) as pbar:
+            ani = animation.FuncAnimation(
+                self.fig, self.update, frames=range(0, 2 * len(self.state_estimates)), init_func=self.init
+            )
+            ani.save(f'{self.name}.gif', writer='Pillow', fps=20, progress_callback=lambda i, n: pbar.update())
