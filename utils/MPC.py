@@ -73,11 +73,11 @@ def plot_car(ax, x, y, yaw, steer=0.0, truckcolor="-k"):
 
 class Vehicle:
     MAX_STEER = np.radians(45.0)  # maximum steering angle [rad]
-    MAX_DSTEER = np.radians(25.0)  #np.radians(30.0)  # maximum steering speed [rad/s]
+    MAX_DSTEER = np.radians(30.0)  #np.radians(30.0)  # maximum steering speed [rad/s]
     MAX_SPEED = 55.0 / 3.6  # maximum speed [m/s]
     MIN_SPEED = -20.0 / 3.6  # minimum speed [m/s]
     MAX_ACCEL = 1.0  # maximum accel [m/ss]
-    WB = 1.25
+    WB = 2.5  # wheel base [m]
     
     def __init__(self, x = 0.0, y = 0.0, yaw = 0.0, v = 0.0, dt = 0.1, store_states = False):
         self.x = x
