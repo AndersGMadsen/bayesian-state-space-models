@@ -4,7 +4,7 @@ Inspirations from: Atsushi Sakai (@Atsushi_twi)
 
 import numpy as np
 import cvxpy
-from tqdm.autonotebook import tqdm
+from tqdm.auto import tqdm
 # Ignore warnings
 import warnings
 warnings.filterwarnings("ignore")
@@ -447,25 +447,7 @@ if __name__ == '__main__':
     y_point  = np.r_[3, y1, y2, 20]
         
     cx, cy, cyaw, ck, s = cubic_spline_planner.calc_spline_course(x_point, y_point, ds=0.1)
-    
-    
-    # Plot the course
-    # fig, ax = plt.subplots(1, 1, figsize=(16, 6))
 
-    # ax.plot(x_point, y_point, 'k.', markersize=10)
-    # ax.plot(cx, cy, 'r--', linewidth=2)
-
-    # ax.hlines(1, 1, 45, color='k', linestyle='solid', linewidth=1)
-    # ax.hlines(5, 1, 40, color='k', linestyle='solid', linewidth=1)
-    # ax.vlines(45, 1, 20, color='k', linestyle='solid', linewidth=1)
-    # ax.vlines(40, 5, 20, color='k', linestyle='solid', linewidth=1)
-
-    # ax.set_xlim(0, 46)
-    # ax.set_ylim(0, 21)
-    # ax.set_aspect('equal')
-
-    # plt.show()
-    
     # Simulation
     initial_state = Vehicle(x=cx[0], y=cy[0], yaw=cyaw[0], v=0.0)
 
@@ -474,34 +456,3 @@ if __name__ == '__main__':
 
     t, x, y, yaw, v, d, a, target_inds, xrefs = simulation.simulate(cx, cy, cyaw, ck, dl)
     xrefs = np.r_[xrefs[0:1], xrefs]
-    
-    # Save animation
-    # fig, ax = plt.subplots(1, 1, figsize=(16, 6))
-
-    # def animate(i):
-    #     ax.cla()
-    #     #ax.plot(cx, cy, "-r", label="course")
-    #     ax.plot(x_point, y_point, "kx", markersize=10)
-    #     ax.plot(x[:i], y[:i], "-b", label="trajectory")
-    #     ax.plot(xrefs[i, 0, :], xrefs[i, 1, :], "xk", label="xref")
-    #     ax.plot(cx[target_inds[i]], cy[target_inds[i]], "xg", label="target")
-    #     plot_car(ax, x[i], y[i], yaw[i], steer=d[i], truckcolor="k")
-    #     ax.axis("equal")
-    #     ax.grid(True)
-    #     ax.set_title("Time[s]:" + str(round(t[i], 2)) + ", speed[km/h]:" + str(round(v[i] * 3.6, 2)))
-    #     ax.hlines(1, 1, 45, color='k', linestyle='solid', linewidth=1)
-    #     ax.hlines(5, 1, 40, color='k', linestyle='solid', linewidth=1)
-    #     ax.vlines(45, 1, 20, color='k', linestyle='solid', linewidth=1)
-    #     ax.vlines(40, 5, 20, color='k', linestyle='solid', linewidth=1)
-
-    #     ax.set_xlim(0, 46)
-    #     ax.set_ylim(0, 21)
-    #     ax.set_aspect('equal')
-
-    # ani = animation.FuncAnimation(fig, animate, frames=len(t), repeat=False)
-
-    # Save animation with progress bar
-    # with tqdm(total=len(t)) as pbar:
-    #     ani.save('animation1.gif', writer='Pillow', fps=25, progress_callback=lambda i, n: pbar.update())
-        
-    plt.close()

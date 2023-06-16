@@ -1,6 +1,6 @@
 import numpy as np
-from MPC import MPC, Vehicle, Simulation, plot_car
-import cubic_spline_planner
+from utils.vehicle_simulation import MPC, Vehicle, Simulation, plot_car
+import utils.cubic_spline_planner
 from scipy.stats import multivariate_normal as mvn
 from matplotlib import pyplot as plt
 from tqdm.auto import tqdm
