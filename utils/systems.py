@@ -224,7 +224,7 @@ class MPCTrajectory:
         self._measurements = measurements
 
     def get_data(self):
-        return self.states, self.measurements
+        return self.states.copy(), self.measurements.copy()
     
     def plot(self, states, measurements):
 
