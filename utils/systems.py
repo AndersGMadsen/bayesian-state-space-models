@@ -5,6 +5,7 @@ from scipy.stats import multivariate_normal as mvn
 from matplotlib import pyplot as plt
 from tqdm.auto import tqdm
 from matplotlib import animation
+from os.path import exists
 
 class CarTrajectoryLinear:
     def __init__(self, N = 100, dt = 0.1, q1 = 1, q2 = 1, s1 = 0.5, s2 = 0.5):
@@ -118,7 +119,7 @@ class CarTrajectoryNonLinear:
     
     
 class MPCTrajectory:
-    def __init__(self):
+    def __init__(self, savepath=None):
 
         x1 = np.linspace(5, 43, 6)
         x2 = np.repeat(42.5, 3) + np.random.normal(0, 0.75, 3)
@@ -146,11 +147,18 @@ class MPCTrajectory:
         self.R = np.array([[s1, 0],
                     [0, s2]])
         
+        self.savepath = savepath
 
     @property
     def states(self):
-        if self._states is None:
-            self._calculate_states()
+        if not self._states:
+            if self.savepath and exists(self.savepath):
+                self._states = np.load(self.savepath)
+            else:
+                self._states = self._calculate_states()
+                if self.savepath:
+                    np.save(self.savepath, self._states)
+                    
         return self._states
 
     @property
@@ -202,7 +210,7 @@ class MPCTrajectory:
         # skip = int((1 / initial_state.dt) / 5)
         # x, y, dx, dy = x[::skip], y[::skip], dx[::skip], dy[::skip]            
 
-        self._states = np.c_[x, y, dx, dy]
+        return np.c_[x, y, dx, dy]
 
     def h(self, x):
         H = np.array([[1, 0, 0, 0],
@@ -218,7 +226,6 @@ class MPCTrajectory:
         
         return out
     
-
     def _calculate_measurements(self):
         measurements = self.h(self._states) + mvn([0, 0], self.R).rvs(len(self._states))        
         self._measurements = measurements
