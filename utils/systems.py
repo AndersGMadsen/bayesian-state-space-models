@@ -6,6 +6,7 @@ from matplotlib import pyplot as plt
 from tqdm.auto import tqdm
 from matplotlib import animation
 from os.path import exists
+import pickle
 
 class CarTrajectoryLinear:
     def __init__(self, N = 100, dt = 0.1, q1 = 1, q2 = 1, s1 = 0.5, s2 = 0.5):
@@ -119,7 +120,7 @@ class CarTrajectoryNonLinear:
     
     
 class MPCTrajectory:
-    def __init__(self,  x_points, y_points, line_segments, savepath=None):
+    def __init__(self, x_points, y_points, line_segments, savepath=None):
 
         self.x_points = x_points
         self.y_points = y_points
@@ -143,13 +144,23 @@ class MPCTrajectory:
 
     @property
     def states(self):
-        if not self._states:
+        if self._states is None:
             if self.savepath and exists(self.savepath):
-                self._states = np.load(self.savepath)
+                # Load states, states_hist, controls_hist
+                with open(self.savepath, 'rb') as file:
+                    tmp = pickle.load(file)
+                    
+                self._states = tmp['states']
+                self.states_hist = tmp['states_hist']
+                self.controls_hist = tmp['controls_hist']
+                
             else:
                 self._states = self._calculate_states()
                 if self.savepath:
-                    np.save(self.savepath, self._states)
+                    # Pickle save states, states_hist, controls_hist
+                    tmp = {'states': self._states, 'states_hist': self.states_hist, 'controls_hist': self.controls_hist}
+                    with open(self.savepath, 'wb') as file:
+                        pickle.dump(tmp, file)
                     
         return self._states
 
@@ -197,10 +208,6 @@ class MPCTrajectory:
         for i in range(len(x)):
             dx[i] = v[i] * np.cos(yaw[i]) * initial_state.dt
             dy[i] = v[i] * np.sin(yaw[i]) * initial_state.dt
-            
-        # Downsample to 2Hz
-        # skip = int((1 / initial_state.dt) / 5)
-        # x, y, dx, dy = x[::skip], y[::skip], dx[::skip], dy[::skip]            
 
         return np.c_[x, y, dx, dy]
 
@@ -226,7 +233,8 @@ class MPCTrajectory:
         return self.states.copy(), self.measurements.copy()
 
     def plot_track(self, ax):
-        ax.plot(self.line_segments[:, 0], self.line_segments[:, 1], 'k-', label='Boundaries', linewidth=2)
+        for line_segment in self.line_segments:
+            ax.plot(line_segment[:, 0], line_segment[:, 1], 'k-', label='Boundaries', linewidth=1)
     
     def plot(self, states, measurements):
 
@@ -286,27 +294,23 @@ class MPCTrajectory:
         plt.close()
 
 
-class track_examples:
-    def __init__(self):
-        self.line_segments = None
-        self.x_points = None
-        self.y_points = None
-
-
-    def example1(self):
+def track_example1(seed=None):
     
-        self.line_segments = np.array([(1,1), (1,5), (40,5), (40,20), (45,20), (45,1), (1,1)])
+    if seed:
+        np.random.seed(seed)
 
-        x1 = np.linspace(5, 43, 6)
-        x2 = np.repeat(42.5, 3) + np.random.normal(0, 0.75, 3)
-        x2 = np.clip(x2, 41, 44)
+    line_segments = [np.array([(1,1), (1,5), (40,5), (40,20), (45,20), (45,1), (1,1)])]
 
-        y1 = np.repeat(3, 6) + np.random.normal(0, 0.75, 6)
-        y1 = np.clip(y1, 2, 4)
+    x1 = np.linspace(5, 43, 6)
+    x2 = np.repeat(42.5, 3) + np.random.normal(0, 0.75, 3)
+    x2 = np.clip(x2, 41, 44)
 
-        y2 = np.linspace(7.5, 17.5, 3)
+    y1 = np.repeat(3, 6) + np.random.normal(0, 0.75, 6)
+    y1 = np.clip(y1, 2, 4)
 
-        self.x_points = np.r_[2, x1, x2, 42.5]
-        self.y_points = np.r_[3, y1, y2, 19]
+    y2 = np.linspace(7.5, 17.5, 3)
 
-        return self.x_points, self.y_points, self.line_segments
+    x_coords = np.r_[2, x1, x2, 42.5]
+    y_coords = np.r_[3, y1, y2, 19]
+
+    return x_coords, y_coords, line_segments
