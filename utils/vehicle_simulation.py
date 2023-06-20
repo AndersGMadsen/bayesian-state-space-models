@@ -394,7 +394,7 @@ class Simulation:
         dy = self.state.y - goal[1]
         d = np.sqrt(dx ** 2 + dy ** 2)
 
-        isgoal = d <= self.goal_dist and abs(tind - nind) < 5
+        isgoal = d <= self.goal_dist #and abs(tind - nind) < 5
         isstop = abs(self.state.v) <= self.goal_speed
 
         return isgoal and isstop
