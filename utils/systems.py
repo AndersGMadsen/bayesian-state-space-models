@@ -119,20 +119,12 @@ class CarTrajectoryNonLinear:
     
     
 class MPCTrajectory:
-    def __init__(self, savepath=None):
+    def __init__(self,  x_points, y_points, line_segments, savepath=None):
 
-        x1 = np.linspace(5, 43, 6)
-        x2 = np.repeat(42.5, 3) + np.random.normal(0, 0.75, 3)
-        x2 = np.clip(x2, 41, 44)
+        self.x_points = x_points
+        self.y_points = y_points
 
-        y1 = np.repeat(3, 6) + np.random.normal(0, 0.75, 6)
-        y1 = np.clip(y1, 2, 4)
-
-        y2 = np.linspace(7.5, 17.5, 3)
-
-        self.x_points = np.r_[1, x1, x2, 42.5]
-        self.y_points = np.r_[3, y1, y2, 20]
-
+        self.line_segments = line_segments
         self._states = None
         self._measurements = None
 
@@ -232,20 +224,19 @@ class MPCTrajectory:
 
     def get_data(self):
         return self.states.copy(), self.measurements.copy()
+
+    def plot_track(self, ax):
+        ax.plot(self.line_segments[:, 0], self.line_segments[:, 1], 'k-', label='Boundaries', linewidth=2)
     
     def plot(self, states, measurements):
 
-        fig, ax = plt.subplots(1, 1, figsize=(16, 6))
+        fig, ax = plt.subplots(1, 1, figsize=(24, 6))
 
         ax.plot(measurements[:, 0], measurements[:, 1], 'o', label='Measurements', markersize=3)
         ax.plot(self.x_points, self.y_points, 'x', label='Waypoints', markersize=10)
         ax.plot(states[:, 0], states[:, 1], label='Trajectory', linewidth=2)
         
-
-        ax.hlines(1, 1, 45, color='k', linestyle='solid', linewidth=1)
-        ax.hlines(5, 1, 40, color='k', linestyle='solid', linewidth=1)
-        ax.vlines(45, 1, 20, color='k', linestyle='solid', linewidth=1)
-        ax.vlines(40, 5, 20, color='k', linestyle='solid', linewidth=1)
+        self.plot_track(ax)
 
         ax.set_xlim(0, 46)
         ax.set_ylim(0, 21)
@@ -272,14 +263,15 @@ class MPCTrajectory:
             ax.plot(states[:i, 0], states[:i, 1], "-r", label="trajectory")
             ax.plot(measurements[:i, 0], measurements[:i, 1], 'bx', markersize=3, label="measurements")
             ax.plot(self.cx[target_inds[i]], self.cy[target_inds[i]], "xg", label="target")
-            plot_car(ax, states[i, 0], states[i, 1], yaw[i], steer=d[i])#, cabcolor="k", truckcolor="k")
+
+            plot_car(ax, states[i, 0], states[i, 1], yaw[i], steer=d[i])
+
+            self.plot_track(ax)
+
             ax.axis("equal")
             ax.grid(True)
+
             ax.set_title("Time [s]:" + str(round(t[i], 2)) + ", speed [km/h]:" + str(round(v[i] * 3.6, 2)))
-            ax.hlines(1, 1, 45, color='k', linestyle='solid', linewidth=1)
-            ax.hlines(5, 1, 40, color='k', linestyle='solid', linewidth=1)
-            ax.vlines(45, 1, 20, color='k', linestyle='solid', linewidth=1)
-            ax.vlines(40, 5, 20, color='k', linestyle='solid', linewidth=1)
 
             ax.set_xlim(0, 46)
             ax.set_ylim(0, 21)
@@ -292,3 +284,29 @@ class MPCTrajectory:
             ani.save(f'{filename}.gif', writer='Pillow', fps=25, progress_callback=lambda i, n: pbar.update())
             
         plt.close()
+
+
+class track_examples:
+    def __init__(self):
+        self.line_segments = None
+        self.x_points = None
+        self.y_points = None
+
+
+    def example1(self):
+    
+        self.line_segments = np.array([(1,1), (1,5), (40,5), (40,20), (45,20), (45,1), (1,1)])
+
+        x1 = np.linspace(5, 43, 6)
+        x2 = np.repeat(42.5, 3) + np.random.normal(0, 0.75, 3)
+        x2 = np.clip(x2, 41, 44)
+
+        y1 = np.repeat(3, 6) + np.random.normal(0, 0.75, 6)
+        y1 = np.clip(y1, 2, 4)
+
+        y2 = np.linspace(7.5, 17.5, 3)
+
+        self.x_points = np.r_[2, x1, x2, 42.5]
+        self.y_points = np.r_[3, y1, y2, 19]
+
+        return self.x_points, self.y_points, self.line_segments
