@@ -173,9 +173,9 @@ class MPCTrajectory:
     # Based on gut feelings
     def speed_reduction(self, cyaw, sp):
         speed_reduction = np.diff(cyaw)
-        speed_reduction = np.concatenate([speed_reduction[int(len(speed_reduction)*0.025):],
-                                        np.linspace(speed_reduction[-1], 0, int(len(speed_reduction)*0.025))])
-        speed_reduction = np.convolve(speed_reduction, np.ones(30)/30, mode='same')
+        speed_reduction = np.concatenate([speed_reduction[int(len(speed_reduction)*0.05):],
+                                        np.linspace(speed_reduction[-1], 0, int(len(speed_reduction)*0.05))])
+        speed_reduction = np.convolve(speed_reduction, np.ones(len(sp) // 5)/(len(sp) // 5), mode='same')
         speed_reduction = ((1.5*np.max(np.abs(speed_reduction)) - np.abs(speed_reduction)) / (1.5*np.max(np.abs(speed_reduction))))
         speed_reduction = np.clip(speed_reduction, 0, 1)
         speed_reduction *= np.concatenate([np.ones(int(len(speed_reduction)*0.95)+1), np.linspace(1, 0, int(len(speed_reduction)*0.05))])
@@ -187,13 +187,15 @@ class MPCTrajectory:
 
     def _calculate_states(self):
         self.cx, self.cy, cyaw, ck, s = cubic_spline_planner.calc_spline_course(self.x_points, self.y_points, ds=0.1)
+        cyaw = np.abs(cyaw)
+        
         initial_state = Vehicle(x=self.cx[0], y=self.cy[0], yaw=cyaw[0], v=0.0)
         dl = 1.0
                 
-        simulation = Simulation(initial_state, goal_speed=0.5, target_speed=3)
+        simulation = Simulation(initial_state, goal_speed=0.5, target_speed=3, max_time = 1000)
         
         # Speed profile
-        sp = np.array(simulation.calc_speed_profile(self.cx, self.cy, cyaw))
+        sp = np.abs(simulation.calc_speed_profile(self.cx, self.cy, cyaw))
         sp = self.speed_reduction(cyaw, sp)
         
         # Simulation
@@ -231,23 +233,38 @@ class MPCTrajectory:
 
     def get_data(self):
         return self.states.copy(), self.measurements.copy()
-
-    def plot_track(self, ax):
-        for line_segment in self.line_segments:
-            ax.plot(line_segment[:, 0], line_segment[:, 1], 'k-', label='Boundaries', linewidth=1)
     
-    def plot(self, states, measurements):
+    def get_bounding_box(self):
+        min_x, max_x = np.inf, -np.inf
+        min_y, max_y = np.inf, -np.inf
+        
+        for line_segment in self.line_segments:
+            min_x = np.min([min_x, np.min(line_segment[:, 0])])
+            max_x = np.max([max_x, np.max(line_segment[:, 0])])
+            min_y = np.min([min_y, np.min(line_segment[:, 1])])
+            max_y = np.max([max_y, np.max(line_segment[:, 1])])
 
+        min_x = np.min([min_x, np.min(self.x_points), np.min(self.states[:, 0]), np.min(self.measurements[:, 0])])
+        max_x = np.max([max_x, np.max(self.x_points), np.max(self.states[:, 0]), np.max(self.measurements[:, 0])])
+        min_y = np.min([min_y, np.min(self.y_points), np.min(self.states[:, 1]), np.min(self.measurements[:, 1])])
+        max_y = np.max([max_y, np.max(self.y_points), np.max(self.states[:, 1]), np.max(self.measurements[:, 1])])
+        
+        return min_x, max_x, min_y, max_y
+    
+    def plot(self):
         fig, ax = plt.subplots(1, 1, figsize=(24, 6))
 
-        ax.plot(measurements[:, 0], measurements[:, 1], 'o', label='Measurements', markersize=3)
+        ax.plot(self.measurements[:, 0], self.measurements[:, 1], 'o', label='Measurements', markersize=3)
         ax.plot(self.x_points, self.y_points, 'x', label='Waypoints', markersize=10)
-        ax.plot(states[:, 0], states[:, 1], label='Trajectory', linewidth=2)
+        ax.plot(self.states[:, 0], self.states[:, 1], label='Trajectory', linewidth=2)
         
-        self.plot_track(ax)
+        for line_segment in self.line_segments:
+            ax.plot(line_segment[:, 0], line_segment[:, 1], 'k-', label='Boundaries', linewidth=1)
+            
+        min_x, max_x, min_y, max_y = self.get_bounding_box()      
 
-        ax.set_xlim(0, 46)
-        ax.set_ylim(0, 21)
+        ax.set_xlim(min_x - 3, max_x + 3)
+        ax.set_ylim(min_y - 3, max_y + 3)
         ax.set_aspect('equal')
 
         ax.legend()
@@ -262,27 +279,26 @@ class MPCTrajectory:
         v = self.states_hist['v']
         yaw = self.states_hist['yaw']
         d = self.controls_hist['d']
-        states = self.states
-        measurements = self.measurements        
+                
+        min_x, max_x, min_y, max_y = self.get_bounding_box()      
 
         def aux_animate(i):
             ax.cla()
             ax.plot(self.x_points, self.y_points, "kx", markersize=10)
-            ax.plot(states[:i, 0], states[:i, 1], "-r", label="trajectory")
-            ax.plot(measurements[:i, 0], measurements[:i, 1], 'bx', markersize=3, label="measurements")
+            ax.plot(self.states[:i, 0], self.states[:i, 1], "-r", label="trajectory")
+            ax.plot(self.measurements[:i, 0], self.measurements[:i, 1], 'bx', markersize=3, label="measurements")
             ax.plot(self.cx[target_inds[i]], self.cy[target_inds[i]], "xg", label="target")
 
-            plot_car(ax, states[i, 0], states[i, 1], yaw[i], steer=d[i])
+            plot_car(ax, self.states[i, 0], self.states[i, 1], yaw[i], steer=d[i])
 
-            self.plot_track(ax)
-
-            ax.axis("equal")
-            ax.grid(True)
-
+            for line_segment in self.line_segments:
+                ax.plot(line_segment[:, 0], line_segment[:, 1], 'k-', label='Boundaries', linewidth=1)
+            
             ax.set_title("Time [s]:" + str(round(t[i], 2)) + ", speed [km/h]:" + str(round(v[i] * 3.6, 2)))
-
-            ax.set_xlim(0, 46)
-            ax.set_ylim(0, 21)
+            
+            ax.grid(True)
+            ax.set_xlim(min_x - 3, max_x + 3)
+            ax.set_ylim(min_y - 3, max_y + 3)
             ax.set_aspect('equal')
 
         ani = animation.FuncAnimation(fig, aux_animate, frames=len(t), repeat=False)
