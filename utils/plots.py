@@ -3,7 +3,7 @@ import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.patches import Ellipse
 import matplotlib.animation as animation
-from IPython.display import display, HTML
+from IPython.display import display, HTML, Image
 
 from tqdm.auto import tqdm
 from scipy.linalg import eigh
@@ -38,13 +38,21 @@ def plot_trajectory(ax, states, cov_estimates, label, color='cornflowerblue', al
         conf_ellipse(ax, states[i, :2,], cov_estimates[i, :2, :2], alpha=alpha)
 
 
-def visualize_filter_and_smoother(states, measurements, state_estimates, cov_estimates, state_estimates_smoothed, cov_estimates_smoothed, variant=""):
+def visualize_filter_and_smoother(states, measurements, state_estimates, cov_estimates, state_estimates_smoothed, cov_estimates_smoothed, particle_history=None, variant=""):
 
         fig, ax = plt.subplots(1, 2, figsize=(16, 4), sharey=True)
-        for k in range(2):
-                ax[k].plot(states[0, 0], states[0, 1], 'x', color='k', label="Start")
-                ax[k].plot(states[:, 0], states[:, 1], '--', color='r', label="True trajectory")
-                ax[k].plot(measurements[:, 0], measurements[:, 1], '.', color='orange', label="Noisy observations")
+
+        if particle_history is not None:
+            n = len(measurements)
+            blues = plt.get_cmap('Blues')(np.linspace(0.2, 1.0, n))
+            for k in range(n):
+                ax[0].scatter(particle_history[k, :, 0], particle_history[k, :, 1], s=1, color=blues[k])
+                ax[1].scatter(particle_history[k, :, 0], particle_history[k, :, 1], s=1, color=blues[k])
+
+        for i in range(2):
+                ax[i].plot(states[0, 0], states[0, 1], 'x', color='k', label="Start")
+                ax[i].plot(states[:, 0], states[:, 1], '--', color='r', label="True trajectory")
+                ax[i].plot(measurements[:, 0], measurements[:, 1], '.', color='orange', label="Noisy observations")
 
         plot_trajectory(ax[0], state_estimates, cov_estimates, label=f"{variant} Kalman Filter x")
         plot_trajectory(ax[1], state_estimates_smoothed, cov_estimates_smoothed, label=f"{variant} RTS Smoother")
@@ -194,6 +202,7 @@ class PlotAnimation:
             ani.save(f'{self.name}.gif', writer='Pillow', fps=20, progress_callback=lambda i, n: pbar.update())
 
         plt.close()
+
 
 
 def show_animation(trajectory, gif_path="animations/car_trajectory"):
