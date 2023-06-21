@@ -9,6 +9,8 @@ class StateSpaceModel:
         self.s1 = s1
         self.s2 = s2
         
+        # These dynamics come from Example 4.3 in Bayesian Smoothin and Filtering, Simo Sarkka (2013)
+        
         self.Q = np.array([[(q1 * dt**3) / 3, 0, (q1 * dt**2) / 2, 0],
                         [ 0, (q2 * dt**3) / 3, 0, (q2 * dt**2) / 2],
                         [(q1 * dt**2) / 2, 0, q1 * dt, 0],
