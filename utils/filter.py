@@ -7,7 +7,23 @@ from scipy.stats import multivariate_normal as mvn
 from tqdm.auto import tqdm
 
 class KF:
+    """
+    Kalman Filter (KF) class. Provides methods for prediction, 
+    update, filtering, and smoothing of a linear system.
+    """
+    
     def __init__(self, A, Q, H, R, dim_m = 4, dim_y = 2):
+        """
+        Initialize KF object with given parameters.
+
+        Args:
+        A (numpy.ndarray): State transition matrix.
+        Q (numpy.ndarray): Process noise covariance matrix.
+        H (numpy.ndarray): Measurement matrix.
+        R (numpy.ndarray): Measurement noise covariance matrix.
+        dim_m (int): Dimension of the state. Default is 4.
+        dim_y (int): Dimension of the output. Default is 2.
+        """
         self.A = A
         self.Q = Q
         self.H = H
@@ -21,25 +37,60 @@ class KF:
         assert R.shape == (dim_y, dim_y)
         
     def predict(self, m, P):
+        """
+        Perform prediction step in Kalman Filter.
+
+        Args:
+        m (numpy.ndarray): State estimate vector.
+        P (numpy.ndarray): State covariance matrix.
+
+        Returns:
+        m_pred (numpy.ndarray): Predicted state estimate vector.
+        p_pred (numpy.ndarray): Predicted state covariance matrix.
+        """
         m_pred = self.A @ m
         p_pred = self.A @ P @ self.A.T + self.Q
         return m_pred, p_pred
     
     def update(self, m_pred, P_pred, y):
+        """
+        Perform update step in Kalman Filter.
+
+        Args:
+        m_pred (numpy.ndarray): Predicted state estimate vector from predict step.
+        P_pred (numpy.ndarray): Predicted state covariance matrix from predict step.
+        y (numpy.ndarray): Current measurement vector.
+
+        Returns:
+        m (numpy.ndarray): Updated state estimate vector.
+        P (numpy.ndarray): Updated state covariance matrix.
+        """
         S = self.H @ P_pred @ self.H.T + self.R
         K = P_pred @ self.H.T @ np.linalg.inv(S)
         m = m_pred + K @ (y - self.H @ m_pred)
         P = P_pred - K @ self.H @ P_pred
         return m, P
     
-    # Kalman Filter
     def filter(self, measurements, m = None, P = None):
+        """
+        Perform Kalman Filtering on a sequence of measurements.
+
+        Args:
+        measurements (numpy.ndarray): Sequence of measurement vectors.
+        m (numpy.ndarray): Initial state estimate vector. If None, initialized to zero vector.
+        P (numpy.ndarray): Initial state covariance matrix. If None, initialized to identity matrix.
+
+        Returns:
+        state_estimates (numpy.ndarray): Sequence of state estimate vectors.
+        cov_estimates (numpy.ndarray): Sequence of state covariance matrices.
+        """
         n = len(measurements)
         if m is None: m = np.zeros(self.dim_m)
         if P is None: P = np.eye(self.dim_m)
         state_estimates = np.empty((n, self.dim_m))
         cov_estimates = np.empty((n, self.dim_m, self.dim_m))
         
+        # Perform filtering for each measurement
         for i, y in enumerate(measurements):
             m_pred, P_pred = self.predict(m, P)
             m, P = self.update(m_pred, P_pred, y)
@@ -48,8 +99,18 @@ class KF:
         
         return state_estimates, cov_estimates
     
-    # Rauch-Tung-Striebel (RTS) Smoother
     def smoother(self, state_estimates, cov_estimates):
+        """
+        Perform Rauch-Tung-Striebel (RTS) Smoothing on a sequence of state estimates and covariance estimates.
+
+        Args:
+        state_estimates (numpy.ndarray): Sequence of state estimate vectors from filter step.
+        cov_estimates (numpy.ndarray): Sequence of state covariance matrices from filter step.
+
+        Returns:
+        state_estimates_smoothed (numpy.ndarray): Sequence of smoothed state estimate vectors.
+        cov_estimates_smoothed (numpy.ndarray): Sequence of smoothed state covariance matrices.
+        """
         n = len(state_estimates)
         state_estimates_smoothed = np.empty((n, self.dim_m))
         state_estimates_smoothed[-1] = state_estimates[-1]
@@ -57,6 +118,7 @@ class KF:
         cov_estimates_smoothed = np.empty((n, self.dim_m, self.dim_m))
         cov_estimates_smoothed[-1] = cov_estimates[-1]
 
+        # Perform smoothing for each state estimate (backwards from end)
         for k in range(n- 2, -1, -1):
             m_pred = self.A @ state_estimates[k]
             P_pred = self.A @ cov_estimates[k] @ self.A.T + self.Q
