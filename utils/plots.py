@@ -204,7 +204,6 @@ class PlotAnimation:
         plt.close()
 
 
-
 def show_animation(trajectory, gif_path="animations/car_trajectory"):
     def display_animation(gif_path, style='style="max-width:100%;"'):
         display(HTML(f'<img src="{gif_path}" {style}>'))
@@ -215,7 +214,6 @@ def show_animation(trajectory, gif_path="animations/car_trajectory"):
     display_animation(gif_path + ".gif")
 
     plt.close()
-
 
 def show_filter_animation(animation, gif_path):
     if not os.path.exists(gif_path + ".gif"):
