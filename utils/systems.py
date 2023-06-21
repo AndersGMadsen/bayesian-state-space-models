@@ -66,7 +66,7 @@ class CarTrajectoryNonLinear:
 class MPCTrajectory:
     """Trajectory class using Model Predictive Control to generate a trajectory for the vehicle."""    
     
-    def __init__(self, x_points, y_points, line_segments, sp_reduction = False, savepath=None):
+    def __init__(self, x_points, y_points, line_segments, sp_reduction = True, savepath=None):
 
         self.x_points = x_points
         self.y_points = y_points
@@ -124,7 +124,10 @@ class MPCTrajectory:
         speed_reduction = np.convolve(speed_reduction, np.ones(len(sp) // 5)/(len(sp) // 5), mode='same')
         speed_reduction = ((1.5*np.max(np.abs(speed_reduction)) - np.abs(speed_reduction)) / (1.5*np.max(np.abs(speed_reduction))))
         speed_reduction = np.clip(speed_reduction, 0, 1)
-        speed_reduction *= np.concatenate([np.ones(int(len(speed_reduction)*0.95)+1), np.linspace(1, 0, int(len(speed_reduction)*0.05))])
+        tmp = np.concatenate([np.ones(int(len(speed_reduction)*0.95)+1), np.linspace(1, 0, int(len(speed_reduction)*0.05))])
+        tmp = tmp[:len(speed_reduction)]
+
+        speed_reduction *= tmp
         
         sp_new = sp
         sp_new[:-1] *= speed_reduction
@@ -143,6 +146,7 @@ class MPCTrajectory:
         # Speed profile
         sp = np.abs(simulation.calc_speed_profile(cx, cy, cyaw))
         if self.sp_reduction:
+            print("hello")
             sp = self.speed_reduction(cyaw, sp)
         
         # Simulation
@@ -292,4 +296,21 @@ def track_example2():
     x_coords = np.concatenate([x_coords_1, x_coords_2])
     y_coords = np.concatenate([y_coords_1, y_coords_2])
     
+    return x_coords, y_coords, line_segments
+
+def track_example3(seed=None):
+    
+    if seed:
+        np.random.seed(seed)
+
+    line_segments = [np.array([(0,0), (0,5), (17.5, 5), (17.5, 10), (32.5, 10), (32.5, 5), (50,5), (50,0), (27.5,0), (27.5, 5), (22.5, 5), (22.5, 0), (0,0)])]
+
+    x = np.linspace(2, 48, 6)
+
+    y = np.repeat(2.5, 6) + np.random.normal(0, 0.25, 6)
+    y = np.clip(y, 1, 4)
+
+    x_coords = x
+    y_coords = y
+
     return x_coords, y_coords, line_segments
