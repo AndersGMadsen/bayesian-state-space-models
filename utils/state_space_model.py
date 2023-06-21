@@ -9,7 +9,7 @@ class StateSpaceModel:
         self.s1 = s1
         self.s2 = s2
         
-        # These dynamics come from Example 4.3 in Bayesian Smoothin and Filtering, Simo Sarkka (2013)
+        # These dynamics come from Example 4.3 in Bayesian Smoothing and Filtering, Simo Sarkka (2013)
         
         self.Q = np.array([[(q1 * dt**3) / 3, 0, (q1 * dt**2) / 2, 0],
                         [ 0, (q2 * dt**3) / 3, 0, (q2 * dt**2) / 2],
@@ -42,6 +42,8 @@ class StateSpaceModel:
     def f_linear(self, x):
         return self.A @ x
     
+    # nonlinear f and h contain sines and cosines which is simply an example
+    # of nonlinearity - these incorporate bias into the model (maybe of drunk driving?)
     def f_nonlinear(self, x):
         return np.array([0.1 * np.sin(x[0]), 0.1 * np.sin(x[1]), 0, 0])
     
