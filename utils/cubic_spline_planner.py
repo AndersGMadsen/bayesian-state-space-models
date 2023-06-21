@@ -1,5 +1,5 @@
 """
-Inspired by Atsushi Sakai(@Atsushi_twi)
+Implementation by Atsushi Sakai(@Atsushi_twi)
 
 """
 import math

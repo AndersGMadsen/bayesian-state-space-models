@@ -1,3 +1,6 @@
+# Implementation by Anders Gjølbye Madsen
+
+
 import numpy as np
 
 def systematic_resampling(weights):

@@ -1,5 +1,7 @@
 """
 Inspirations from: Atsushi Sakai (@Atsushi_twi)
+Written by: Anders Gjølbye Madsen
+
 """
 
 import numpy as np

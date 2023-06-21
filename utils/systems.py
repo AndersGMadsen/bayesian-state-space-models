@@ -252,8 +252,10 @@ class MPCTrajectory:
         return min_x, max_x, min_y, max_y
     
     def plot(self):
-        fig, ax = plt.subplots(1, 1, figsize=(24, 6))
-
+        min_x, max_x, min_y, max_y = self.get_bounding_box()      
+        ratio = (max_x - min_x + 6) / (max_y - min_y + 6)        
+        fig, ax = plt.subplots(1, 1, figsize=(ratio*4, 4))
+        
         ax.plot(self.measurements[:, 0], self.measurements[:, 1], 'o', label='Measurements', markersize=3)
         ax.plot(self.x_points, self.y_points, 'x', label='Waypoints', markersize=10)
         ax.plot(self.states[:, 0], self.states[:, 1], label='Trajectory', linewidth=2)
@@ -261,7 +263,6 @@ class MPCTrajectory:
         for line_segment in self.line_segments:
             ax.plot(line_segment[:, 0], line_segment[:, 1], 'k-', label='Boundaries', linewidth=1)
             
-        min_x, max_x, min_y, max_y = self.get_bounding_box()      
 
         ax.set_xlim(min_x - 3, max_x + 3)
         ax.set_ylim(min_y - 3, max_y + 3)
@@ -272,22 +273,22 @@ class MPCTrajectory:
         plt.show()
 
     def animate(self, filename='animation'):
-        fig, ax = plt.subplots(1, 1, figsize=(16, 6))
+        min_x, max_x, min_y, max_y = self.get_bounding_box()      
+        ratio = (max_x - min_x + 6) / (max_y - min_y + 6)        
+        fig, ax = plt.subplots(1, 1, figsize=(ratio*4, 4))
         
         target_inds = self.controls_hist['target_inds'] 
         t = self.states_hist['t']
         v = self.states_hist['v']
         yaw = self.states_hist['yaw']
         d = self.controls_hist['d']
-                
-        min_x, max_x, min_y, max_y = self.get_bounding_box()      
 
         def aux_animate(i):
             ax.cla()
             ax.plot(self.x_points, self.y_points, "kx", markersize=10)
             ax.plot(self.states[:i, 0], self.states[:i, 1], "-r", label="trajectory")
             ax.plot(self.measurements[:i, 0], self.measurements[:i, 1], 'bx', markersize=3, label="measurements")
-            ax.plot(self.cx[target_inds[i]], self.cy[target_inds[i]], "xg", label="target")
+            #ax.plot(self.cx[target_inds[i]], self.cy[target_inds[i]], "xg", label="target")
 
             plot_car(ax, self.states[i, 0], self.states[i, 1], yaw[i], steer=d[i])
 
@@ -329,4 +330,17 @@ def track_example1(seed=None):
     x_coords = np.r_[2, x1, x2, 42.5]
     y_coords = np.r_[3, y1, y2, 19]
 
+    return x_coords, y_coords, line_segments
+
+def track_example2():
+
+    line_segments = [np.array([(0, 0), (60, 0), (70, -2.5), (82.5, -2.5), (82.5, 8.5), (70, 8.5), (60, 6), (0, 6), (0, 3.5), (75, 3.5), (75, 2.5), (0, 2.5), (0, 0)])]
+    x_coords_1 = np.array([4, 20, 50, 55, 60, 65, 70, 75, 80])
+    x_coords_2 = x_coords_1[::-1]
+    y_coords_1 = np.concatenate([np.repeat(1.25, 6), [0, -1.0, 1.75]])
+    y_coords_2 = np.concatenate([[4.0, 7.0, 6.0], np.repeat(4.75, 6)])
+
+    x_coords = np.concatenate([x_coords_1, x_coords_2])
+    y_coords = np.concatenate([y_coords_1, y_coords_2])
+    
     return x_coords, y_coords, line_segments
