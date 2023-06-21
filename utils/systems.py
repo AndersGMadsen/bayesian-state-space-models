@@ -8,11 +8,9 @@ from matplotlib import animation
 from os.path import exists
 import pickle
 
-
-"""
-Trajectory class using a linear state space model to generate a trajectory for the vehicle.
-"""
 class CarTrajectoryLinear:
+    """Trajectory class using a linear state space model to generate a trajectory for the vehicle."""
+    
     def __init__(self, Q, R, A, H, N = 100):
         self.Q = Q
         self.R = R
@@ -37,10 +35,10 @@ class CarTrajectoryLinear:
         
         return self.x, self.y
 
-"""
-Trajectory class using a nonlinear state space model to generate a trajectory for the vehicle.
-"""
+
 class CarTrajectoryNonLinear:
+    """Trajectory class using a nonlinear state space model to generate a trajectory for the vehicle."""
+    
     def __init__(self, Q, R, f, h, N = 100):
         self.Q = Q
         self.R = R
@@ -65,10 +63,9 @@ class CarTrajectoryNonLinear:
         
         return self.x, self.y
 
-"""
-Trajectory class using Model Predictive Control to generate a trajectory for the vehicle.
-"""    
 class MPCTrajectory:
+    """Trajectory class using Model Predictive Control to generate a trajectory for the vehicle."""    
+    
     def __init__(self, x_points, y_points, line_segments, sp_reduction = False, savepath=None):
 
         self.x_points = x_points
