@@ -1,7 +1,10 @@
+import os
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.patches import Ellipse
 import matplotlib.animation as animation
+from IPython.display import display, HTML
+
 from tqdm.auto import tqdm
 from scipy.linalg import eigh
 from scipy.stats import chi2, norm
@@ -35,7 +38,39 @@ def plot_trajectory(ax, states, cov_estimates, label, color='cornflowerblue', al
         conf_ellipse(ax, states[i, :2,], cov_estimates[i, :2, :2], alpha=alpha)
 
 
+def visualize_filter_and_smoother(states, measurements, state_estimates, cov_estimates, state_estimates_smoothed, cov_estimates_smoothed, variant=""):
 
+        fig, ax = plt.subplots(1, 2, figsize=(16, 4), sharey=True)
+        for k in range(2):
+                ax[k].plot(states[0, 0], states[0, 1], 'x', color='k', label="Start")
+                ax[k].plot(states[:, 0], states[:, 1], '--', color='r', label="True trajectory")
+                ax[k].plot(measurements[:, 0], measurements[:, 1], '.', color='orange', label="Noisy observations")
+
+        plot_trajectory(ax[0], state_estimates, cov_estimates, label=f"{variant} Kalman Filter x")
+        plot_trajectory(ax[1], state_estimates_smoothed, cov_estimates_smoothed, label=f"{variant} RTS Smoother")
+
+        # Show the MSE on the plot in upper right corner
+        ax[0].text(1.00, 1.05, "MSE: {:.2f}".format(np.mean((states[:, :2] - state_estimates[:, :2])**2)),
+                horizontalalignment='right', verticalalignment='top', transform=ax[0].transAxes)
+        ax[1].text(1.00, 1.05, "MSE: {:.2f}".format(np.mean((states[:, :2] - state_estimates_smoothed[:, :2])**2)),
+                horizontalalignment='right', verticalalignment='top', transform=ax[1].transAxes)
+        
+        for k in range(2):
+                ax[k].hlines(1, 1, 45, color='k', linestyle='solid', linewidth=1)
+                ax[k].hlines(5, 1, 40, color='k', linestyle='solid', linewidth=1)
+                ax[k].vlines(45, 1, 20, color='k', linestyle='solid', linewidth=1)
+                ax[k].vlines(40, 5, 20, color='k', linestyle='solid', linewidth=1)
+
+                ax[k].set_xlabel('x')
+                ax[k].set_ylabel('y')
+
+                ax[k].legend()
+
+        ax[0].set_title(f"{variant} Kalman Filter")
+        ax[1].set_title(f"{variant} RTS Smoother")
+
+        plt.tight_layout()
+        plt.show()
 
 
 class PlotAnimation:
@@ -159,3 +194,28 @@ class PlotAnimation:
             ani.save(f'{self.name}.gif', writer='Pillow', fps=20, progress_callback=lambda i, n: pbar.update())
 
         plt.close()
+
+
+def show_animation(trajectory, gif_path="animations/car_trajectory"):
+    def display_animation(gif_path, style='style="max-width:100%;"'):
+        display(HTML(f'<img src="{gif_path}" {style}>'))
+
+    if not os.path.exists(gif_path + ".gif"):
+        trajectory.animate(filename=gif_path)
+
+    display_animation(gif_path + ".gif")
+
+    plt.close()
+
+
+def show_filter_animation(animation, gif_path):
+    if not os.path.exists(gif_path + ".gif"):
+        animation.animate()
+
+    # Clear the redundant plot
+    animation.ax.clear()
+
+    # Display the animation without any additional plot
+    display(HTML(f'<img src="{gif_path}.gif">'))
+
+    plt.close()
