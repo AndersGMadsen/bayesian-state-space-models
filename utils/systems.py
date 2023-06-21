@@ -297,3 +297,20 @@ def track_example2():
     y_coords = np.concatenate([y_coords_1, y_coords_2])
     
     return x_coords, y_coords, line_segments
+
+def track_example3(seed=None):
+    
+    if seed:
+        np.random.seed(seed)
+
+    line_segments = [np.array([(0,0), (0,5), (17.5, 5), (17.5, 10), (32.5, 10), (32.5, 5), (50,5), (50,0), (27.5,0), (27.5, 5), (22.5, 5), (22.5, 0), (0,0)])]
+
+    x = np.linspace(2, 48, 6)
+
+    y = np.repeat(2.5, 6) + np.random.normal(0, 0.25, 6)
+    y = np.clip(y, 1, 4)
+
+    x_coords = x
+    y_coords = y
+
+    return x_coords, y_coords, line_segments
