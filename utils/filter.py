@@ -2,7 +2,7 @@
 
 import numpy as np
 from scipy.linalg import cholesky
-from utils.methods import systematic_resampling, residual_resampling, stratified_resampling
+from utils.methods import systematic_resampling, residual_resampling, stratified_resampling, sample_from_mixture
 from scipy.stats import multivariate_normal as mvn
 from tqdm.auto import tqdm
 
@@ -679,3 +679,124 @@ class PF:
             cov_estimates_smoothed[k] = P + G @ (cov_estimates_smoothed[k + 1] - P_pred) @ G.T
 
         return state_estimates_smoothed, cov_estimates_smoothed
+    
+
+class PPF:
+    """
+    Parzen Particle Filter (PPF) class. Provides methods for prediction, update, filtering, resampling and smoothing of a non-linear system.
+    """
+
+    def __init__(self, f, h, F_jacobian, Q, R, dim_m=4, dim_y=2, N=50):
+        """
+        Initialize PPF object with given parameters.
+
+        Args:
+        f (function): Function for state transition.
+        F_jacobian (function): Function to compute the Jacobian of f.
+        h (function): Function for measurement.
+        dim_m (int): Dimension of the state. Default is 4.
+        dim_y (int): Dimension of the output. Default is 2.
+        N (int): Number of particles. Default is 50.
+        """
+        self.f = f
+        self.h = h
+        self.F_jacobian = F_jacobian
+        self.Q = Q
+        self.R = R
+        self.dim_m = dim_m
+        self.dim_y = dim_y
+        self.N = N
+
+    def resample(self, weights, particles, particle_covs, dim_m = 4):
+
+        new_particles = sample_from_mixture(weights, particles, particle_covs, len(weights))
+
+        
+        new_particle_covs = np.tile(np.eye(dim_m) / 10, (len(weights), 1, 1))
+
+        new_weights = np.ones(len(weights)) / len(weights)
+
+        return new_weights, new_particles, new_particle_covs
+
+    def predict(self, particles, particle_covs, weights):
+        """
+        Perform prediction step in Parzen Particle Filter.
+
+        Args:
+        particles (numpy.ndarray): Current particle state_estimates.
+        particle_covs (numpy.ndarray): Current particle covariance matrices.
+        weights (numpy.ndarray): Current weights.
+
+        Returns:
+        particles (numpy.ndarray): Predicted particle state_estimates.
+        particle_covs (numpy.ndarray): Predicted particle covariance matrices.
+        weights (numpy.ndarray): Predicted weights.
+        """
+        for i, particle in enumerate(particles):
+            #particles[i] = mvn(self.f(particle), self.Q).rvs() 
+            particles[i] = mvn(self.f(particle), particle_covs[i]).rvs() 
+            #particles[i] = self.f(particle)
+            particle_covs[i] = self.F_jacobian(particle) @ particle_covs[i] @ self.F_jacobian(particle).T # (7.b) from Parzen paper
+
+        return particles, particle_covs, weights
+
+    def update(self, y, particles, particle_covs, weights):
+        """
+        Perform update step in Parzen Particle Filter.
+
+        Args:
+        y (numpy.ndarray): Measurement vector.
+        particles (numpy.ndarray): Current particle state_estimates.
+        particle_covs (numpy.ndarray): Current particle covariance matrices.
+        weights (numpy.ndarray): Current weights.
+
+        Returns:
+        particles (numpy.ndarray): Updated particle state_estimates.
+        particle_covs (numpy.ndarray): Updated particle covariance matrices.
+        weights (numpy.ndarray): Updated weights.
+        """
+        for i, (weight, particle) in enumerate(zip(weights, particles)):
+            weights[i] *= mvn(self.h(particle), self.R).pdf(y) * (np.linalg.det(self.F_jacobian(particle)) ** -1)
+
+        weights /= np.sum(weights)
+
+        return particles, particle_covs, weights
+    
+    def filter(self, measurements, m=None, P=None, verbose=True):#resampling_method='systematic', ):
+        """
+        Perform Parzen Particle Filtering on a sequence of measurements.
+        """
+        if m is None: m = np.zeros(self.dim_m)
+        if P is None: P = np.eye(self.dim_m) / 10
+
+        n = len(measurements)
+        state_estimates = np.empty((n, self.dim_m))
+        particle_history = np.empty((n, self.N, self.dim_m))
+        particle_cov_history = np.empty((n, self.N, self.dim_m, self.dim_m))
+        weights_history = np.empty((n, self.N))
+
+        # Draw N samples from the prior
+        particles = mvn(m, P).rvs(self.N)
+        particle_covs = np.tile(P, (self.N, 1, 1))
+        weights = np.ones(self.N) / self.N
+
+        if verbose:
+            iterator = tqdm(enumerate(measurements), total=n)
+        else:
+            iterator = enumerate(measurements)
+
+        for k, y in iterator:
+            particles, particle_covs, weights = self.predict(particles, particle_covs, weights)
+            particles, particle_covs, weights = self.update(y, particles, particle_covs, weights)
+
+            m = np.average(particles, weights=weights, axis=0)
+
+            state_estimates[k] = m
+            particle_history[k] = particles
+            particle_cov_history[k] = particle_covs
+            weights_history[k] = weights
+
+            # Resample
+            weights, particles, particle_covs  = self.resample(weights, particles, particle_covs)
+
+        return state_estimates, particle_history, particle_cov_history, weights_history
