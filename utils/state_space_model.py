@@ -35,18 +35,6 @@ class StateSpaceModel:
     
     def get_nonlinear_model_jacobian(self):
         return self.F_jacobian, self.H_jacobian
-    
-    def Q(self):
-        return self.Q
-
-    def R(self):
-        return self.R
-    
-    def A(self):
-        return self.A
-    
-    def H(self):
-        return self.H
         
     def f_linear(self, x):
         return self.A @ x
