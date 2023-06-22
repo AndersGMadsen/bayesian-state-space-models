@@ -1,4 +1,4 @@
-# SP: Advanced Bayesian Methods for State Space Models
+# SC: Advanced Bayesian Methods for State Space Models
 
 Anders Gjølbye Madsen (s194260) and William Lehn-Schiøler (s194272)
 
