@@ -38,6 +38,42 @@ def plot_trajectory(ax, states, cov_estimates, label, color='cornflowerblue', al
         conf_ellipse(ax, states[i, :2,], cov_estimates[i, :2, :2], alpha=alpha)
 
 
+def visualize_filter(states, measurements, state_estimates, cov_estimates, particle_history=None, title="Title"):
+
+        fig, ax = plt.subplots(1, 1, figsize=(16, 4), sharey=True)
+
+        if particle_history is not None:
+            n = len(particle_history)
+            blues = plt.get_cmap('Blues')(np.linspace(0.2, 1.0, n))
+            for k in range(n):
+                ax.scatter(particle_history[k, :, 0], particle_history[k, :, 1], s=1, color=blues[k])
+
+        ax.plot(states[0, 0], states[0, 1], 'x', color='k', label="Start")
+        ax.plot(states[:, 0], states[:, 1], '--', color='r', label="True trajectory")
+        ax.plot(measurements[:, 0], measurements[:, 1], '.', color='orange', label="Noisy observations")
+
+        plot_trajectory(ax, state_estimates, cov_estimates, label=title)
+
+        # Show the MSE on the plot in upper right corner
+        ax.text(1.00, 1.05, "MSE: {:.2f}".format(np.mean((states[:, :2] - state_estimates[:, :2])**2)),
+                horizontalalignment='right', verticalalignment='top', transform=ax.transAxes)
+
+        ax.hlines(1, 1, 45, color='k', linestyle='solid', linewidth=1)
+        ax.hlines(5, 1, 40, color='k', linestyle='solid', linewidth=1)
+        ax.vlines(45, 1, 20, color='k', linestyle='solid', linewidth=1)
+        ax.vlines(40, 5, 20, color='k', linestyle='solid', linewidth=1)
+
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+
+        ax.legend()
+
+        ax.set_title(title)
+
+        plt.tight_layout()
+        plt.show()
+
+
 def visualize_filter_and_smoother(states, measurements, state_estimates, cov_estimates, state_estimates_smoothed, cov_estimates_smoothed, particle_history=None, variant=""):
 
         fig, ax = plt.subplots(1, 2, figsize=(16, 4), sharey=True)
