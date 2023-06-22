@@ -1,7 +1,7 @@
 import numpy as np
 from utils.vehicle_simulation import Vehicle, Simulation, plot_car
 import utils.cubic_spline_planner as cubic_spline_planner
-from scipy.stats import multivariate_normal as mvn
+from scipy.stats import multivariate_normal, multivariate_t
 from matplotlib import pyplot as plt
 from tqdm.auto import tqdm
 from matplotlib import animation
@@ -26,12 +26,12 @@ class CarTrajectoryLinear:
         self.x = np.zeros((self.N, self.dim_m))
         self.y = np.zeros((self.N, self.dim_y))
         
-        self.x[0] = mvn(mean = np.array([0, 0, 0, 0]), cov = self.Q).rvs(1)
-        self.y[0] = mvn(mean = self.H @ self.x[0], cov = self.R).rvs(1)
+        self.x[0] = multivariate_normal(mean = np.array([0, 0, 0, 0]), cov = self.Q).rvs(1)
+        self.y[0] = multivariate_normal(mean = self.H @ self.x[0], cov = self.R).rvs(1)
         
         for i in range(1, self.N):
-            self.x[i] = mvn(mean = self.A @ self.x[i - 1], cov = self.Q).rvs(1)
-            self.y[i] = mvn(mean = self.H @ self.x[i], cov = self.R).rvs(1)
+            self.x[i] = multivariate_normal(mean = self.A @ self.x[i - 1], cov = self.Q).rvs(1)
+            self.y[i] = multivariate_normal(mean = self.H @ self.x[i], cov = self.R).rvs(1)
         
         return self.x, self.y
 
@@ -55,18 +55,20 @@ class CarTrajectoryNonLinear:
         self.y = np.zeros((self.N, self.dim_y))
         
         self.x[0] = np.array([0, 0, 0, 0])
-        self.y[0] = self.h(self.x[0]) + mvn(np.zeros(2), self.R).rvs(1)
+        self.y[0] = self.h(self.x[0]) + multivariate_normal(np.zeros(2), self.R).rvs(1)
         
         for i in range(1, self.N):
-            self.x[i] = self.f(self.x[i - 1]) + mvn(np.zeros(4), self.Q).rvs(1)
-            self.y[i] = self.h(self.x[i]) + mvn(np.zeros(2), self.R).rvs(1)
+            self.x[i] = self.f(self.x[i - 1]) + multivariate_normal(np.zeros(4), self.Q).rvs(1)
+            self.y[i] = self.h(self.x[i]) + multivariate_normal(np.zeros(2), self.R).rvs(1)
         
         return self.x, self.y
 
 class MPCTrajectory:
     """Trajectory class using Model Predictive Control to generate a trajectory for the vehicle."""    
     
-    def __init__(self, x_points, y_points, line_segments, sp_reduction = True, savepath=None):
+    def __init__(self, x_points, y_points, line_segments, noise_dist = 'mvn', r1 = 1, r2 = 1, sp_reduction = True, savepath=None):
+
+        self.noise_dist = noise_dist
 
         self.x_points = x_points
         self.y_points = y_points
@@ -76,12 +78,13 @@ class MPCTrajectory:
         self._states = None
         self._measurements = None
 
-
         self.states_hist = None
         self.controls_hist = None
+
+        self.r1 = r1
+        self.r2 = r2
                 
-        self.R = np.array([[2, 0],
-                    [0, 2]])
+        self.R = np.diag([self.r1, self.r2])
         
         self.sp_reduction = sp_reduction
         self.savepath = savepath
@@ -181,8 +184,15 @@ class MPCTrajectory:
     
     # Calculate measurements by passing states through h(x) and adding gaussian noise
     def _calculate_measurements(self):
-        measurements = self.h(self._states) + mvn([0, 0], self.R).rvs(len(self._states))        
-        self._measurements = measurements
+
+        if self.noise_dist == 'mvn':
+            r = multivariate_normal([0, 0], self.R).rvs(len(self._states)) 
+        elif self.noise_dist == 'mvt':
+            r = multivariate_t([0, 0], self.R, df=10).rvs(len(self._states))
+        else:
+            raise ValueError('noise_dist must be "mvn" or "mvt"')
+              
+        self._measurements = self.h(self._states) + r 
 
     def get_data(self):
         return self.states.copy(), self.measurements.copy()
