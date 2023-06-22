@@ -17,28 +17,39 @@ Clone the repository and run "pip install -r requirements.txt" to install depend
 
 Here is a high-level overview of the file structure in this repository:
 
-| bayesian-state-space-models
-|- animations (gif files with filtering and smoothing)
-|- demos (demonstrations of methods)
-|-- extended.ipynb
-|-- normal.ipynb
-|-- particle.ipynb
-|-- unscented.ipynb
-|- examples (theoretical illustrations)
-|-- sampling.ipynb
-|-- unscented_transformation.ipynb
-|- output (trajectory data)
-|- papers (litterature used in this project)
-|- utils (utilities for the project)
-|-- __init__.py
-|-- cubic_spline_planner.py
-|-- filter.py (classes for filters and smoothers)
-|-- methods.py
-|-- plots.py
-|-- state_space_model.py
-|-- systems.py
-|-- vehicle_simulation.py
-|- gitignore
-|- Contrained_Notebook.ipynb (explainer containing theory)
-|- Filtering_Notebook.ipynb (explainer containing theory)
-|- README.md
+
+Certainly! Here's a beautifully formatted layout for the file structure in your README.md file:
+
+markdown
+Copy code
+# bayesian-state-space-models
+
+A project on Bayesian state space models.
+
+## File Structure
+
+.
+├── animations (gif files with filtering and smoothing)
+├── demos (demonstrations of methods)
+│ ├── extended.ipynb
+│ ├── normal.ipynb
+│ ├── particle.ipynb
+│ └── unscented.ipynb
+├── examples (theoretical illustrations)
+│ ├── sampling.ipynb
+│ └── unscented_transformation.ipynb
+├── output (trajectory data)
+├── papers (literature used in this project)
+├── utils (utilities for the project)
+│ ├── init.py
+│ ├── cubic_spline_planner.py
+│ ├── filter.py (classes for filters and smoothers)
+│ ├── methods.py
+│ ├── plots.py
+│ ├── state_space_model.py
+│ ├── systems.py
+│ └── vehicle_simulation.py
+├── .gitignore
+├── Constrained_Notebook.ipynb (explainer containing theory)
+├── Filtering_Notebook.ipynb (explainer containing theory)
+└── README.md
