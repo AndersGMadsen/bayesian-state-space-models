@@ -1,4 +1,4 @@
-# SP: Advanced Bayesian Methods for State Space Models
+# SC: Advanced Bayesian Methods for State Space Models
 
 Anders Gjølbye Madsen (s194260) and William Lehn-Schiøler (s194272)
 
@@ -42,7 +42,7 @@ A project on Bayesian state space models.
 │   ├── resampling.ipynb
 │   └── unscented_transformation.ipynb
 ├── output
-├── papers
+├── litterature
 ├── utils
 │   ├── __init__.py
 │   ├── cubic_spline_planner.py
@@ -61,7 +61,7 @@ A project on Bayesian state space models.
 
 ### Root Directory
 
-The root directory contains folders of animations in gif format, demonstrations of specific Bayesian methods in notebook format, examples of other interesting methods included in the project in notebook format, trajectory data for the specific tracks, papers containing relevant ideas and concepts, utility scripts for the project, two pedagogical explainer notebooks showcasing the primary work of the course, and a gitignore as well as a README file.
+The root directory contains folders of animations in gif format, demonstrations of specific Bayesian methods in notebook format, examples of other interesting methods included in the project in notebook format, trajectory data for the specific tracks, books and papers containing relevant ideas and concepts, utility scripts for the project, two pedagogical explainer notebooks showcasing the primary work of the course, and a gitignore as well as a README file.
 
 #### animations
 
@@ -85,6 +85,19 @@ Contains illustrative animations of the methods used.
 
 Contains data from the MPC trajectory
 
-#### papers
+#### literature
+- Bayesian Filtering and Smoothing, Simo Sarkka
+- a few relevant papers
 
+#### utils
+
+- __init__.py: imports from all files in utils
+- cubic_spline_planner.py: contains classes Spline and Spline2D
+- filter.py: contains the following classes for Bayesian and Monte Carlo methods for filtering and smooting: KF (Kalman filter), EKF (extended Kalman filter), UKF (unscented Kalman filter), PF (particle filtering), and PPF (Parzen particle filtering), as well as PF_CONSTRAINED (constrained particle filtering).
+- methods.py: contains classes for sampling methods: systematic_resampling, residual resampling, stratefied_resampling, and sample_from_mixture (sampling from a Gaussian Micture Model).
+- plots.py: contains functions rgba_to_rgb, conf_ellipse, plot_trajectory, as well as visualize_filter and visualize_filter_and_smoother. Contains also classes PlotAnimation and PlotParzenAnimation + show_animations function.
+- state_space_model.py: contains class for the state space model used to describe the driving car. The Dynamics come from Ex. 4.3 of Bayesian Filtering and Smoothing. Information of both a linear and a nonlinear system can be extracted.
+- systems.py: contains classes used to generate the systems (CarTrajectoryLinear, CarTrajectoryNonLinear, and MPCTrajectory). Information from the state space model can or cannot be used to generate the system. Contains also functions to generate specific tracks (track_example1, track_example2, and track_example3)
+- utils.py: contains functions make_constraint, point_in_polygon, line_search, and nearest_point
+- vehicle_simulation: contains function for the car simulation, that is, function plot_car, and classes Vehicle, MPC, and Simulation
 
