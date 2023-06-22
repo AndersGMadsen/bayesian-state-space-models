@@ -32,12 +32,14 @@ A project on Bayesian state space models.
 .
 ├── animations
 ├── demos
-│   ├── extended.ipynb
 │   ├── normal.ipynb
+│   ├── extended.ipynb
+│   ├── unscented.ipynb
 │   ├── particle.ipynb
-│   └── unscented.ipynb
+│   └── parzen.ipynb
 ├── examples
 │   ├── sampling.ipynb
+│   ├── resampling.ipynb
 │   └── unscented_transformation.ipynb
 ├── output
 ├── papers
@@ -56,3 +58,33 @@ A project on Bayesian state space models.
 └── README.md
 
 ```
+
+### Root Directory
+
+The root directory contains folders of animations in gif format, demonstrations of specific Bayesian methods in notebook format, examples of other interesting methods included in the project in notebook format, trajectory data for the specific tracks, papers containing relevant ideas and concepts, utility scripts for the project, two pedagogical explainer notebooks showcasing the primary work of the course, and a gitignore as well as a README file.
+
+#### animations
+
+Contains illustrative animations of the methods used.
+
+#### demos
+
+- normal.ipynb: Demonstration of the standard Kalman filter and the RTS smoother
+- extended.ipynb: Demonstration of the extended Kalman filter and the extended RTS smoother
+- unscented.ipynb: Demonstration of the unscented Kalman filter and the unscented RTS smoother
+- particle.ipynb: Demonstration of the particle filter
+- parzen.ipynb: Demonstration of the Parzen particle filter
+
+#### examples
+
+- sampling.ipynb: Examples of importance sampling.
+- resampling.ipynb: Examples of resampling methods (systematic, residual, and stratefied)
+- unscented_transformation.ipynb: Examples of the proporties of the unscented transformation and three ways of choosing Sigma points (Merwe, Julier, and Simplex).
+
+#### output
+
+Contains data from the MPC trajectory
+
+#### papers
+
+
