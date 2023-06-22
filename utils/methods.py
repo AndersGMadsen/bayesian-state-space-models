@@ -134,7 +134,7 @@ def stratified_resampling(weights):
             
     return indexes
 
-def sample_from_mixture(means, covariances, weights, num_samples):
+def sample_from_mixture(weights, means, covariances, num_samples):
     """
     Generate samples from a mixture of Gaussians.
 
