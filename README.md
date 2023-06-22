@@ -28,6 +28,7 @@ A project on Bayesian state space models.
 
 ## File Structure
 
+'''
 .
 ├── animations (gif files with filtering and smoothing)
 ├── demos (demonstrations of methods)
@@ -53,3 +54,4 @@ A project on Bayesian state space models.
 ├── Constrained_Notebook.ipynb (explainer containing theory)
 ├── Filtering_Notebook.ipynb (explainer containing theory)
 └── README.md
+'''
