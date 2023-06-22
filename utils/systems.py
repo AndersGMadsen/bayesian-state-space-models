@@ -1,7 +1,7 @@
 import numpy as np
 from utils.vehicle_simulation import Vehicle, Simulation, plot_car
 import utils.cubic_spline_planner as cubic_spline_planner
-from scipy.stats import multivariate_normal as mvn
+from scipy.stats import multivariate_normal, multivariate_t
 from matplotlib import pyplot as plt
 from tqdm.auto import tqdm
 from matplotlib import animation
@@ -185,9 +185,9 @@ class MPCTrajectory:
     # Calculate measurements by passing states through h(x) and adding gaussian noise
     def _calculate_measurements(self):
 
-        if self.noise_dist is 'mvn':
+        if self.noise_dist == 'mvn':
             r = multivariate_normal([0, 0], self.R).rvs(len(self._states)) 
-        elif self.noise_dist is 'mvt':
+        elif self.noise_dist == 'mvt':
             r = multivariate_t([0, 0], self.R, df=10).rvs(len(self._states))
         else:
             raise ValueError('noise_dist must be "mvn" or "mvt"')
