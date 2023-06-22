@@ -43,7 +43,7 @@ def visualize_filter_and_smoother(states, measurements, state_estimates, cov_est
         fig, ax = plt.subplots(1, 2, figsize=(16, 4), sharey=True)
 
         if particle_history is not None:
-            n = len(measurements)
+            n = len(particle_history)
             blues = plt.get_cmap('Blues')(np.linspace(0.2, 1.0, n))
             for k in range(n):
                 ax[0].scatter(particle_history[k, :, 0], particle_history[k, :, 1], s=1, color=blues[k])
