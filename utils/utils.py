@@ -58,7 +58,7 @@ def nearest_point(x0, y0, c, precision=0.01, max_dist=1000):
     radius = 0
 
     while radius < max_dist:
-        for theta in np.linspace(0, 2 * math.pi, 100):
+        for theta in np.linspace(0, 2 * np.pi, 100):
             x = x0 + radius * np.cos(theta)
             y = y0 + radius * np.sin(theta)
             if c([x, y, 0, 0]):
