@@ -66,7 +66,9 @@ class CarTrajectoryNonLinear:
 class MPCTrajectory:
     """Trajectory class using Model Predictive Control to generate a trajectory for the vehicle."""    
     
-    def __init__(self, x_points, y_points, line_segments, sp_reduction = True, savepath=None):
+    def __init__(self, x_points, y_points, line_segments, noise_dist = 'mvn', r1 = 1, r2 = 1, sp_reduction = True, savepath=None):
+
+        self.noise_dist = noise_dist
 
         self.x_points = x_points
         self.y_points = y_points
@@ -76,12 +78,13 @@ class MPCTrajectory:
         self._states = None
         self._measurements = None
 
-
         self.states_hist = None
         self.controls_hist = None
+
+        self.r1 = r1
+        self.r2 = r2
                 
-        self.R = np.array([[2, 0],
-                    [0, 2]])
+        self.R = np.diag([self.r1, self.r2])
         
         self.sp_reduction = sp_reduction
         self.savepath = savepath
@@ -181,8 +184,15 @@ class MPCTrajectory:
     
     # Calculate measurements by passing states through h(x) and adding gaussian noise
     def _calculate_measurements(self):
-        measurements = self.h(self._states) + mvn([0, 0], self.R).rvs(len(self._states))        
-        self._measurements = measurements
+
+        if self.noise_dist is 'mvn':
+            r = multivariate_normal([0, 0], self.R).rvs(len(self._states)) 
+        elif self.noise_dist is 'mvt':
+            r = multivariate_t([0, 0], self.R, df=10).rvs(len(self._states))
+        else:
+            raise ValueError('noise_dist must be "mvn" or "mvt"')
+              
+        self._measurements = self.h(self._states) + r 
 
     def get_data(self):
         return self.states.copy(), self.measurements.copy()
