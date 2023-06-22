@@ -26,12 +26,12 @@ class CarTrajectoryLinear:
         self.x = np.zeros((self.N, self.dim_m))
         self.y = np.zeros((self.N, self.dim_y))
         
-        self.x[0] = mvn(mean = np.array([0, 0, 0, 0]), cov = self.Q).rvs(1)
-        self.y[0] = mvn(mean = self.H @ self.x[0], cov = self.R).rvs(1)
+        self.x[0] = multivariate_normal(mean = np.array([0, 0, 0, 0]), cov = self.Q).rvs(1)
+        self.y[0] = multivariate_normal(mean = self.H @ self.x[0], cov = self.R).rvs(1)
         
         for i in range(1, self.N):
-            self.x[i] = mvn(mean = self.A @ self.x[i - 1], cov = self.Q).rvs(1)
-            self.y[i] = mvn(mean = self.H @ self.x[i], cov = self.R).rvs(1)
+            self.x[i] = multivariate_normal(mean = self.A @ self.x[i - 1], cov = self.Q).rvs(1)
+            self.y[i] = multivariate_normal(mean = self.H @ self.x[i], cov = self.R).rvs(1)
         
         return self.x, self.y
 
@@ -55,11 +55,11 @@ class CarTrajectoryNonLinear:
         self.y = np.zeros((self.N, self.dim_y))
         
         self.x[0] = np.array([0, 0, 0, 0])
-        self.y[0] = self.h(self.x[0]) + mvn(np.zeros(2), self.R).rvs(1)
+        self.y[0] = self.h(self.x[0]) + multivariate_normal(np.zeros(2), self.R).rvs(1)
         
         for i in range(1, self.N):
-            self.x[i] = self.f(self.x[i - 1]) + mvn(np.zeros(4), self.Q).rvs(1)
-            self.y[i] = self.h(self.x[i]) + mvn(np.zeros(2), self.R).rvs(1)
+            self.x[i] = self.f(self.x[i - 1]) + multivariate_normal(np.zeros(4), self.Q).rvs(1)
+            self.y[i] = self.h(self.x[i]) + multivariate_normal(np.zeros(2), self.R).rvs(1)
         
         return self.x, self.y
 
