@@ -9,6 +9,18 @@ understanding of advanced Bayesian methods for state-space models. It is offered
 the spring semester and extends to 5.0 ECTS credits over a three-week period in June. The examination is a
 hand-in of the GitHub repository and an oral presentation of developed content.
 
+## Learning objectives
+
+A student who has met the objectives of the course will be able to
+
+1. Understand, implement, and analyze Extended and Unscented Kalman Filters.
+2. Understand, implement, and analyze Extended and Unscented Rauch-Tung-Striebel (RTS) methods.
+3. Understand, implement, and analyze Particle Filtering and Smoothing algorithms.
+4. Maintain a professional codebase with version control practices.
+5. Create visualizations to effectively communicate the applied methods.
+6. Evaluate the implemented methods in practical, real-world scenarios.
+7. Investigate different solutions for handling constrained continuous states.
+
 ## Installation
 
 Clone the repository and run "pip install -r requirements.txt" to install dependencies
