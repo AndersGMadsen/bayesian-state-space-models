@@ -75,8 +75,6 @@ def nearest_point(x0, y0, c, precision=0.01, max_dist=1000):
         radius += precision
 
 
-
-
 ### Unscented Transform ###
 
 def get_weights(n, alpha=0.5, beta=2, kappa=0, method='merwe'):
