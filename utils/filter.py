@@ -2,7 +2,8 @@
 
 import numpy as np
 from scipy.linalg import cholesky
-from utils.methods import systematic_resampling, residual_resampling, stratified_resampling
+from utils.methods import systematic_resampling, residual_resampling, stratified_resampling, sample_from_mixture
+from utils.utils import line_search, make_constraint, nearest_point
 from scipy.stats import multivariate_normal as mvn
 from tqdm.auto import tqdm
 
@@ -678,4 +679,596 @@ class PF:
             state_estimates_smoothed[k] = m + G @ (state_estimates_smoothed[k + 1] - m_pred)
             cov_estimates_smoothed[k] = P + G @ (cov_estimates_smoothed[k + 1] - P_pred) @ G.T
 
+        return state_estimates_smoothed, cov_estimates_smoothed
+    
+
+class PPF:
+    """
+    Parzen Particle Filter (PPF) class. Provides methods for prediction, update, filtering, resampling and smoothing of a non-linear system.
+    """
+
+    def __init__(self, f, h, F_jacobian, Q, R, dim_m=4, dim_y=2, N=50):
+        """
+        Initialize PPF object with given parameters.
+
+        Args:
+        f (function): Function for state transition.
+        F_jacobian (function): Function to compute the Jacobian of f.
+        h (function): Function for measurement.
+        dim_m (int): Dimension of the state. Default is 4.
+        dim_y (int): Dimension of the output. Default is 2.
+        N (int): Number of particles. Default is 50.
+        """
+        self.f = f
+        self.h = h
+        self.F_jacobian = F_jacobian
+        self.Q = Q
+        self.R = R
+        self.dim_m = dim_m
+        self.dim_y = dim_y
+        self.N = N
+
+    def resample(self, weights, particles, particle_covs, dim_m = 4):
+
+        new_particles = sample_from_mixture(weights, particles, particle_covs, len(weights))
+
+        
+        new_particle_covs = np.tile(np.eye(dim_m) / 10, (len(weights), 1, 1))
+
+        new_weights = np.ones(len(weights)) / len(weights)
+
+        return new_weights, new_particles, new_particle_covs
+
+    def predict(self, particles, particle_covs, weights):
+        """
+        Perform prediction step in Parzen Particle Filter.
+
+        Args:
+        particles (numpy.ndarray): Current particle state_estimates.
+        particle_covs (numpy.ndarray): Current particle covariance matrices.
+        weights (numpy.ndarray): Current weights.
+
+        Returns:
+        particles (numpy.ndarray): Predicted particle state_estimates.
+        particle_covs (numpy.ndarray): Predicted particle covariance matrices.
+        weights (numpy.ndarray): Predicted weights.
+        """
+        for i, particle in enumerate(particles):
+            #particles[i] = mvn(self.f(particle), self.Q).rvs() 
+            particles[i] = mvn(self.f(particle), particle_covs[i]).rvs() 
+            #particles[i] = self.f(particle)
+            particle_covs[i] = self.F_jacobian(particle) @ particle_covs[i] @ self.F_jacobian(particle).T # (7.b) from Parzen paper
+
+        return particles, particle_covs, weights
+
+    def update(self, y, particles, particle_covs, weights):
+        """
+        Perform update step in Parzen Particle Filter.
+
+        Args:
+        y (numpy.ndarray): Measurement vector.
+        particles (numpy.ndarray): Current particle state_estimates.
+        particle_covs (numpy.ndarray): Current particle covariance matrices.
+        weights (numpy.ndarray): Current weights.
+
+        Returns:
+        particles (numpy.ndarray): Updated particle state_estimates.
+        particle_covs (numpy.ndarray): Updated particle covariance matrices.
+        weights (numpy.ndarray): Updated weights.
+        """
+        for i, (weight, particle) in enumerate(zip(weights, particles)):
+            weights[i] *= mvn(self.h(particle), self.R).pdf(y) * (np.linalg.det(self.F_jacobian(particle)) ** -1)
+
+        weights /= np.sum(weights)
+
+        return particles, particle_covs, weights
+    
+    def filter(self, measurements, m=None, P=None, verbose=True):#resampling_method='systematic', ):
+        """
+        Perform Parzen Particle Filtering on a sequence of measurements.
+        """
+        if m is None: m = np.zeros(self.dim_m)
+        if P is None: P = np.eye(self.dim_m) / 10
+
+        n = len(measurements)
+        state_estimates = np.empty((n, self.dim_m))
+        particle_history = np.empty((n, self.N, self.dim_m))
+        particle_cov_history = np.empty((n, self.N, self.dim_m, self.dim_m))
+        weights_history = np.empty((n, self.N))
+
+        # Draw N samples from the prior
+        particles = mvn(m, P).rvs(self.N)
+        particle_covs = np.tile(P, (self.N, 1, 1))
+        weights = np.ones(self.N) / self.N
+
+        if verbose:
+            iterator = tqdm(enumerate(measurements), total=n)
+        else:
+            iterator = enumerate(measurements)
+
+        for k, y in iterator:
+            particles, particle_covs, weights = self.predict(particles, particle_covs, weights)
+            particles, particle_covs, weights = self.update(y, particles, particle_covs, weights)
+
+            m = np.average(particles, weights=weights, axis=0)
+
+            state_estimates[k] = m
+            particle_history[k] = particles
+            particle_cov_history[k] = particle_covs
+            weights_history[k] = weights
+
+            # Resample
+            weights, particles, particle_covs  = self.resample(weights, particles, particle_covs)
+
+        return state_estimates, particle_history, particle_cov_history, weights_history
+    
+    
+    
+class PF_CONSTRAINED:
+    """
+    Class to implement Particle Filter constrained method. 
+    This class is designed to solve the problem of filtering 
+    and smoothing state-space models where there are constraints 
+    on the state-space that can be represented by a likelihood function
+    that is one for feasible states and zero for infeasible states.
+
+    Parameters
+    ----------
+    f: function
+        The system dynamics function.
+    h: function
+        The observation function.
+    Q: ndarray
+        The system noise covariance.
+    R: ndarray
+        The observation noise covariance.
+    c: function
+        The constraint function.
+    dim_m: int, optional
+        The dimension of the state space. Defaults to 4.
+    dim_y: int, optional
+        The dimension of the observation space. Defaults to 2.
+    N: int, optional
+        The number of particles. Defaults to 500.
+    resample_criterion: bool, optional
+        Whether to resample particles. Defaults to False.
+    resampling_method: str, optional
+        The method to use for resampling. Defaults to 'systematic'.
+    constrained_method: str, optional
+        The method to use for handling constraints. Defaults to 'line'.
+    distribution: str, optional
+        The type of the initial particles' distribution. Defaults to 'normal'.
+    """
+
+    def __init__(self, f, h, Q, R, c, dim_m = 4, dim_y = 2, N=500, resample_criterion = False,
+                 resampling_method = 'systematic', constrained_method = 'line', distribution = 'normal'):
+        self.f = f
+        self.h = h
+        self.Q = Q
+        self.R = R
+        self.dim_m = dim_m
+        self.dim_y = dim_y
+        self.N = N
+        self.resample_criterion = resample_criterion
+        self.c = c
+        
+        self.resampling_method = resampling_method
+        self.constrained_method = constrained_method
+        
+        # Select the initial particles' distribution
+        if distribution == 'normal':
+            self.q = lambda mean, cov: mvn(mean, cov)
+        elif distribution == 't':
+            self.q = lambda mean, cov: mvt(mean, cov, df=5)
+        else:
+            raise ValueError('Unknown distribution')
+
+        # Select the method for handling constraints
+        if self.constrained_method == 'line':
+            update = self.update_line_search
+        elif self.constrained_method == 'line2':
+            update = self.update_line_search2
+        elif self.constrained_method == 'nearest':
+            update = self.update_nearest_point
+        elif self.constrained_method == 'accept_reject':
+            update = self.update_accept_reject
+        elif self.constrained_method == 'none':
+            update = self.update
+        else:
+            raise ValueError('Unknown constrained method')
+
+        # Assert the dimensions of Q and R are correct
+        assert dim_m == len(Q)
+        assert dim_y == len(R)
+        
+    def resample(self, particles, weights):
+        """
+        Resample the particles based on the resampling criterion and method.
+        
+        Parameters
+        ----------
+        particles: ndarray
+            The current particles.
+        weights: ndarray
+            The current weights.
+        
+        Returns
+        -------
+        particles: ndarray
+            The resampled particles.
+        weights: ndarray
+            The resampled weights.
+        """
+        # Perform resampling based on the resampling criterion
+        if not self.resample_criterion or 1. / np.sum(np.square(weights)) < self.N / 2:
+            # Choose resampling method
+            if self.resampling_method == 'systematic':
+                indexes = systematic_resampling(weights)
+            elif self.resampling_method == 'residual':
+                indexes = residual_resampling(weights)
+            elif self.resampling_method == 'stratified':
+                indexes = stratified_resampling(weights)
+            else:
+                raise ValueError('Unknown resampling method')
+            
+            # Resample particles
+            return particles[indexes], np.ones(self.N) / self.N
+        else:
+            return particles, weights
+        
+    def predict(self, particles, weights):
+        """
+        Predict the next state of the particles.
+
+        Parameters
+        ----------
+        particles: ndarray
+            The current particles.
+        weights: ndarray
+            The current weights.
+
+        Returns
+        -------
+        particles: ndarray
+            The predicted particles.
+        weights: ndarray
+            The predicted weights.
+        """
+        # Predict the next state of the particles
+        for i, particle in enumerate(particles):
+            particles[i] = self.q(self.f(particle), self.Q).rvs()
+            
+        return particles, weights
+    
+    def update(self, y, particles, weights, last_m):
+        """
+        Update the particles and weights based on the observation.
+
+        Parameters
+        ----------
+        y: ndarray
+            The observation.
+        particles: ndarray
+            The current particles.
+        weights: ndarray
+            The current weights.
+        last_m: ndarray
+            The previous state estimate.
+
+        Returns
+        -------
+        particles: ndarray
+            The updated particles.
+        weights: ndarray
+            The updated weights.
+        """
+        # Update the weights of the particles
+        for i, (weight, particle) in enumerate(zip(weights, particles)):
+            weights[i] *= mvn(self.h(particle), self.R).pdf(y)
+
+        # Normalize the weights
+        weights /= np.sum(weights)
+
+        return particles, weights
+    
+    def update_line_search(self, y, particles, weights, last_m):
+        """
+        Update the weights and particle states using line search method when constraints are applied.
+
+        Parameters
+        ----------
+        y : ndarray
+            The current observation.
+        particles : ndarray
+            The current particle states.
+        weights : ndarray
+            The current particle weights.
+        last_m : ndarray
+            The last state estimate.
+
+        Returns
+        -------
+        particles: ndarray
+            The updated particle states.
+        weights: ndarray
+            The updated particle weights.
+        """
+        m = np.average(particles, weights=weights, axis=0)
+        
+        # Apply constraints
+        if self.c(m):
+            for i, particle in enumerate(particles):
+                # If particle satisfies the constraint
+                if self.c(particle):
+                    particles[i] = particle
+                    weights[i] *= self.q(self.h(particles[i]), self.R).pdf(y)
+                else:
+                    # Find the point on the line that satisfies the constraint
+                    particles[i] = line_search(m, particle, self.c)
+                    weights[i] *= self.q(self.h(particles[i]), self.R).pdf(y)
+        else:
+            # If mean doesn't satisfy the constraint, find a new point on the line between last_m and each particle
+            for i, particle in enumerate(particles):
+                particles[i] = line_search(last_m, particle, self.c)
+                weights[i] *= self.q(self.h(particles[i]), self.R).pdf(y)
+
+    def update_line_search(self, y, particles, weights, last_m):
+        """
+        Update the particles and weights using line search method.
+
+        Parameters
+        ----------
+        y: ndarray
+            The current observation.
+        particles: ndarray
+            The current particles.
+        weights: ndarray
+            The current weights.
+        last_m: ndarray
+            The last average of particles.
+
+        Returns
+        -------
+        This method does not return anything. It directly updates particles and weights.
+        """
+        
+        m = np.average(particles, weights=weights, axis=0) # Get the weighted average of the particles
+        
+        # Check if average particle position is within the constraint
+        if self.c(m):
+            for i, particle in enumerate(particles):
+                # If the individual particle is within the constraint
+                if self.c(particle):
+                    particles[i] = particle
+                    weights[i] *= self.q(self.h(particles[i]), self.R).pdf(y)
+                else:
+                    # Adjust particle position based on line search if it is outside the constraint
+                    particles[i] = line_search(m, particle, self.c)
+                    weights[i] *= self.q(self.h(particles[i]), self.R).pdf(y)
+        else:
+            # If average particle position is not within the constraint
+            for i, particle in enumerate(particles):
+                particles[i] = line_search(last_m, particle, self.c)
+                weights[i] *= self.q(self.h(particles[i]), self.R).pdf(y)
+
+    def update_line_search_2(self, y, particles, weights, last_m):
+        """
+        Another method to update the particles and weights using line search.
+
+        Parameters are similar to `update_line_search`.
+
+        This function additionally normalizes the weights after updating
+        and returns the updated particles and weights.
+        """
+        
+        m = np.average(particles, weights=weights, axis=0)
+        
+        # The updating procedure is similar to the one in update_line_search
+        if self.c(m):
+            for i, particle in enumerate(particles):
+                if self.c(particle):
+                    particles[i] = particle
+                    weights[i] *= self.q(self.h(particles[i]), self.R).pdf(y)
+                else:
+                    particles[i] = line_search(m, particle, self.c)
+                    weights[i] *= self.q(self.h(particles[i]), self.R).pdf(y)
+        else:
+            for i, particle in enumerate(particles):
+                particles[i] = line_search(last_m, particle, self.c)
+                weights[i] *= self.q(self.h(particles[i]), self.R).pdf(y)      
+                
+        weights /= np.sum(weights)  # Normalize the weights
+        
+        return particles, weights
+
+    def update_line_search_nearest(self, y, particles, weights, last_m):
+        """
+        Update the particles and weights by searching the nearest point
+        that satisfies the constraint from the average particle position.
+
+        Parameters are similar to `update_line_search`.
+
+        This function additionally normalizes the weights after updating
+        and returns the updated particles and weights.
+        """
+        
+        m = np.average(particles, weights=weights, axis=0)
+        
+        # The updating procedure is similar to the one in update_line_search
+        if self.c(m):
+            for i, particle in enumerate(particles):
+                if self.c(particle):
+                    particles[i] = particle
+                    weights[i] *= self.q(self.h(particles[i]), self.R).pdf(y)
+                else:
+                    particles[i] = line_search(m, particle, self.c)
+                    weights[i] *= self.q(self.h(particles[i]), self.R).pdf(y)
+        else:
+            # Find the nearest point that satisfies the constraint
+            x, y = nearest_point(m[0], m[1], self.c)
+            m_tmp = m.copy()
+            m_tmp[:2] = x, y
+            
+            for i, particle in enumerate(particles):
+                if self.c(particle):
+                    particles[i] = particle
+                    weights[i] *= self.q(self.h(particles[i]), self.R).pdf(y)
+                else:
+                    particles[i] = line_search(m_tmp, particle, self.c)
+                    weights[i] *= self.q(self.h(particles[i]), self.R).pdf(y)
+            
+        weights /= np.sum(weights)  # Normalize the weights
+        
+        return particles, weights
+    
+    def update_accept_reject(self, y, particles, weights, m):
+        """
+        Update the particles and weights using an accept-reject method.
+
+        Parameters are similar to `update_line_search`.
+
+        This function additionally normalizes the weights after updating
+        and returns the updated particles and weights.
+        """
+        
+        for i, particle in enumerate(particles):
+            if self.c(particle):
+                weights[i] *= self.q(self.h(particle), self.R).pdf(y)
+            else:
+                weights[i] *= 0  # Reject the particle
+                
+        weights /= np.sum(weights)  # Normalize the weights
+        
+        return particles, weights
+    
+    def filter(self, measurements, m = None, P = None, verbose = True):
+        """
+        Applies the particle filter on a series of measurements.
+        
+        Parameters
+        ----------
+        measurements: ndarray
+            An array of measurements.
+        m: ndarray, optional
+            Initial state mean, default is zero vector.
+        P: ndarray, optional
+            Initial state covariance, default is identity matrix.
+        verbose: bool, optional
+            If True, shows a progress bar, default is True.
+
+        Returns
+        -------
+        tuple
+            State estimates, covariance estimates, particle history, 
+            weights history, resampled history.
+        """
+        
+        # Initialization of m and P
+        if m is None: m = np.zeros(self.dim_m)
+        if P is None: P = np.eye(self.dim_m)
+        
+        n = len(measurements)
+        # Preparation for recording histories
+        state_estimates = np.empty((n, self.dim_m))
+        cov_estimates = np.empty((n, self.dim_m, self.dim_m))
+        particle_history = np.empty((n, self.N, self.dim_m))
+        resampled_history = np.empty((n, self.N, self.dim_m))
+        weights_history = np.empty((n, self.N))
+
+        # Draw N samples from the prior
+        particles = self.q(m, P).rvs(self.N)
+        weights = np.ones(self.N) / self.N
+        
+        # Progress bar for verbose mode
+        if verbose:
+            iterator = tqdm(enumerate(measurements), total=n)
+        else:
+            iterator = enumerate(measurements)
+        
+        # Filtering step
+        for k, y in iterator:
+            particles, weights = self.predict(particles, weights)
+            particles, weights = self.update(y, particles, weights, m)            
+            
+            # Weighted average of particles
+            m = np.average(particles, weights=weights, axis=0)
+            # Covariance of particles
+            P = np.sum([weights[i] * np.outer(particles[i] - m, particles[i] - m)
+                        for i in range(self.N)], axis=0)
+            
+            # Record histories
+            state_estimates[k] = m
+            cov_estimates[k] = P
+            particle_history[k] = particles
+            weights_history[k] = weights
+            
+            particles, weights = self.resample(particles, weights)
+            resampled_history[k] = particles
+            
+        return state_estimates, cov_estimates, particle_history, weights_history, resampled_history
+    
+    # Particle Rauch-Tung-Striebel (URTS) Smoother
+    def smoother(self, state_estimates, cov_estimates, particle_history, weights_history, verbose = True):
+        """
+        Applies the particle Rauch-Tung-Striebel smoother on a series of state estimates.
+        
+        Parameters
+        ----------
+        state_estimates: ndarray
+            An array of state estimates from a filter.
+        cov_estimates: ndarray
+            An array of covariance estimates from a filter.
+        particle_history: ndarray
+            An array of particle history from a filter.
+        weights_history: ndarray
+            An array of weights history from a filter.
+        verbose: bool, optional
+            If True, shows a progress bar, default is True.
+
+        Returns
+        -------
+        tuple
+            Smoothed state estimates, smoothed covariance estimates.
+        """
+        
+        n = len(state_estimates)
+        # Preparation for recording smoothed estimates
+        state_estimates_smoothed = np.empty((n, self.dim_m))
+        state_estimates_smoothed[-1] = state_estimates[-1]
+        cov_estimates_smoothed = np.empty((n, self.dim_m, self.dim_m))
+        cov_estimates_smoothed[-1] = cov_estimates[-1]
+        
+        # Progress bar for verbose mode
+        if verbose:
+            iterator = tqdm(range(n - 2, -1, -1), initial=1, total=n)
+        else:
+            iterator = range(n - 2, -1, -1)
+
+        # Smoothing step
+        for k in iterator:
+            m = state_estimates[k]
+            P = cov_estimates[k]
+            
+            weights = weights_history[k]
+            particles = particle_history[k]
+
+            # Transformation of particles
+            particles_transformed = np.empty_like(particles)
+            for i, particle in enumerate(particles):
+                particles_transformed[i] = self.f(particle)
+            
+            # Predicted mean and covariance
+            m_pred = np.average(particles_transformed, weights=weights, axis=0)
+            P_pred = np.sum([weights[i] * np.outer(particles_transformed[i] - m_pred, particles_transformed[i] - m_pred)
+                             for i in range(self.N)], axis=0) + self.Q
+            
+            # Cross-covariance
+            D = np.sum([weights[i] * np.outer(particles[i] - m, particles_transformed[i] - m_pred)
+                        for i in range(self.N)], axis=0)
+            G = D @ np.linalg.inv(P_pred)
+            
+            # Smoothed estimates
+            state_estimates_smoothed[k] = m + G @ (state_estimates_smoothed[k + 1] - m_pred)
+            cov_estimates_smoothed[k] = P + G @ (cov_estimates_smoothed[k + 1] - P_pred) @ G.T
+            
         return state_estimates_smoothed, cov_estimates_smoothed

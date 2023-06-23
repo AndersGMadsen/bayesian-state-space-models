@@ -26,18 +26,15 @@ class StateSpaceModel:
         
         self.H = np.array([[1, 0, 0, 0],
                         [0, 1, 0, 0]])
+        
+    def get_linear_model(self):
+        return self.Q, self.R, self.A, self.H
     
-    def Q(self):
-        return self.Q
-
-    def R(self):
-        return self.R
+    def get_nonlinear_model(self):
+        return self.Q, self.R, self.f, self.h
     
-    def A(self):
-        return self.A
-    
-    def H(self):
-        return self.H
+    def get_nonlinear_model_jacobian(self):
+        return self.F_jacobian, self.H_jacobian
         
     def f_linear(self, x):
         return self.A @ x

@@ -133,3 +133,29 @@ def stratified_resampling(weights):
             j += 1
             
     return indexes
+
+def sample_from_mixture(weights, means, covariances, num_samples):
+    """
+    Generate samples from a mixture of Gaussians.
+
+    Parameters:
+        means (list of numpy arrays): Mean vectors of the Gaussians.
+        covariances (list of numpy arrays): Covariance matrices of the Gaussians.
+        weights (list of floats): Mixing weights of the Gaussians.
+        num_samples (int): Number of samples to generate.
+
+    Returns:
+        numpy array: Generated samples.
+    """
+    num_gaussians = len(means)
+    samples = np.zeros((num_samples, len(means[0])))
+
+    for i in range(num_samples):
+        # Select a Gaussian component based on the mixing weights
+        gaussian_index = np.random.choice(range(num_gaussians), p=weights)
+
+        # Generate a sample from the selected Gaussian component
+        sample = np.random.multivariate_normal(means[gaussian_index], covariances[gaussian_index])
+        samples[i] = sample
+
+    return samples
