@@ -64,6 +64,9 @@ Contains illustrative animations of the methods used.
 - unscented.ipynb: Demonstration of the unscented Kalman filter and the unscented RTS smoother
 - particle.ipynb: Demonstration of the particle filter
 - parzen.ipynb: Demonstration of the Parzen particle filter
+- number_particles.ipynb: Experiment MSE vs. number of particles
+- measurement_noise_illustration.ipynb: demo of how different methods work with different measurements distributions.
+- tracks.ipynb: Shows the tracks used in the project.
 
 #### examples
 
@@ -88,11 +91,22 @@ Contains data from the MPC trajectory
 - plots.py: contains functions rgba_to_rgb, conf_ellipse, plot_trajectory, as well as visualize_filter and visualize_filter_and_smoother. Contains also classes PlotAnimation and PlotParzenAnimation + show_animations function.
 - state_space_model.py: contains class for the state space model used to describe the driving car. The Dynamics come from Ex. 4.3 of Bayesian Filtering and Smoothing. Information of both a linear and a nonlinear system can be extracted.
 - systems.py: contains classes used to generate the systems (CarTrajectoryLinear, CarTrajectoryNonLinear, and MPCTrajectory). Information from the state space model can or cannot be used to generate the system. Contains also functions to generate specific tracks (track_example1, track_example2, and track_example3)
-- utils.py: contains functions make_constraint, point_in_polygon, line_search, and nearest_point
+- utils.py: contains functions make_constraint, point_in_polygon, line_search, and nearest_point, as well as functions used in the unscented transformation
 - vehicle_simulation: contains function for the car simulation, that is, function plot_car, and classes Vehicle, MPC, and Simulation
 
+### Filtering_Notebook
+
+Explainer notebook that goes through the theory of KF, RTS, EKF, UKF, PF (and PPF), and provides demonstration in forms of plots and animations of the methods.
+
+### Constraint_Notebook
+
+Explainer notebook that goes through the problem of constraining a state space model, and provides demonstration of different formulations as well as illustrations.
 
 
 ## Usage
 
 This project is meant as an introduction as well as an exploration of existing Bayesian and Monte Carlo methods for filtering and smoothing accompanied with illustrative examples. Novel methods such as constrained particle filtering and constrained UKF are also presented and discussed.
+
+## License
+
+MIT License
