@@ -41,6 +41,42 @@ def plot_trajectory(ax, states, cov_estimates, label, color='cornflowerblue', al
         conf_ellipse(ax, states[i, :2,], cov_estimates[i, :2, :2], alpha=alpha)
 
 
+def visualize_filter(states, measurements, state_estimates, cov_estimates, particle_history=None, title="Title"):
+
+        fig, ax = plt.subplots(1, 1, figsize=(16, 4), sharey=True)
+
+        if particle_history is not None:
+            n = len(particle_history)
+            blues = plt.get_cmap('Blues')(np.linspace(0.2, 1.0, n))
+            for k in range(n):
+                ax.scatter(particle_history[k, :, 0], particle_history[k, :, 1], s=1, color=blues[k])
+
+        ax.plot(states[0, 0], states[0, 1], 'x', color='k', label="Start")
+        ax.plot(states[:, 0], states[:, 1], '--', color='r', label="True trajectory")
+        ax.plot(measurements[:, 0], measurements[:, 1], '.', color='orange', label="Noisy observations")
+
+        plot_trajectory(ax, state_estimates, cov_estimates, label=title)
+
+        # Show the MSE on the plot in upper right corner
+        ax.text(1.00, 1.05, "MSE: {:.2f}".format(np.mean((states[:, :2] - state_estimates[:, :2])**2)),
+                horizontalalignment='right', verticalalignment='top', transform=ax.transAxes)
+
+        ax.hlines(1, 1, 45, color='k', linestyle='solid', linewidth=1)
+        ax.hlines(5, 1, 40, color='k', linestyle='solid', linewidth=1)
+        ax.vlines(45, 1, 20, color='k', linestyle='solid', linewidth=1)
+        ax.vlines(40, 5, 20, color='k', linestyle='solid', linewidth=1)
+
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+
+        ax.legend()
+
+        ax.set_title(title)
+
+        plt.tight_layout()
+        plt.show()
+
+
 def visualize_filter_and_smoother(states, measurements, state_estimates, cov_estimates, state_estimates_smoothed, cov_estimates_smoothed, particle_history=None, variant=""):
 
         fig, ax = plt.subplots(1, 2, figsize=(16, 4), sharey=True)
@@ -229,6 +265,83 @@ def show_filter_animation(animation, gif_path):
     display(HTML(f'<img src="{gif_path}.gif">'))
 
     plt.close()
+
+
+
+### Unscented Transform ###
+
+def illustrate_unscented_transform(ut_dict, xs, ys, xs_nl, ys_nl, title='title'):
+
+    """
+    Illustrates the unscented transform
+
+    Parameters
+    ----------
+    ut_dict : dict
+        Dictionary containing the unscented transform
+    xs : numpy array
+        x coordinates of the points
+    ys : numpy array
+        y coordinates of the points
+    xs_nl : numpy array
+        x coordinates of the transformed points
+    ys_nl : numpy array
+        y coordinates of the transformed points
+    title : str
+        Title of the plot
+    """
+
+    def get_ellipsis(cov):
+
+        eigvals, eigvecs = np.linalg.eig(cov)
+        eigvals = 2 * np.sqrt(eigvals)
+
+        theta = np.linspace(0, 2*np.pi, 1000);
+        ellipsis = (eigvals[None,:] * eigvecs) @ [np.sin(theta), np.cos(theta)]
+
+        return ellipsis
+
+    methods = ['merwe', 'julier', 'simplex']
+
+    fig, ax = plt.subplots(1, 3, figsize=(18, 6), sharex=True, sharey=True)
+
+    alpha = .4
+
+    for i, method in enumerate(methods):
+        mean = ut_dict[method]['mean']
+        cov = ut_dict[method]['cov']
+        sigmas = ut_dict[method]['sigmas']
+        sigmas_f = ut_dict[method]['sigmas_f']
+
+        ax[i].scatter(xs_nl, ys_nl, c='g', s=30, alpha=alpha, label='Transformed Points')
+        ax[i].scatter(xs, ys, c='b', s=30, alpha=alpha, label='Original Points')
+
+        # transformed points
+        ax[i].scatter(xs_nl.mean(), ys_nl.mean(), c='purple', s=50, label='Mean of Transformed Points', marker='x')
+
+        ellipsis = get_ellipsis(np.cov([xs_nl, ys_nl]))
+        ax[i].plot(xs_nl.mean() + ellipsis[0,:], ys_nl.mean() + ellipsis[1,:], c='purple', label='Covariance of Transformed Points')
+
+        # sigma points
+        ax[i].scatter(sigmas[:,0], sigmas[:,1], c='r', s=50, label='Sigma Points')
+        ax[i].scatter(sigmas_f[:,0], sigmas_f[:,1], c='k', s=50, label='Transformed Sigma Points')
+
+        # UT estimate
+        ax[i].scatter(mean[0], mean[1], c='y', s=100, label='UT Mean', marker='*')
+
+        ellipsis = get_ellipsis(cov)
+        ax[i].plot(mean[0] + ellipsis[0,:], mean[1] + ellipsis[1,:], c='y', label='UT Covariance')
+
+        ax[i].set_title(method, fontsize=16)
+        ax[i].set_xlabel('x')
+        ax[i].set_ylabel('y')
+
+    ax[0].legend(fontsize=12)
+
+    fig.suptitle(title, fontsize=24)
+
+    plt.tight_layout()
+    plt.show()
     
     
 
