@@ -967,6 +967,7 @@ class PFC:
             weights[i] *= mvn(self.h(particle), self.R).pdf(y)
 
         # Normalize the weights
+        weights += 1.e-300
         weights /= np.sum(weights)
 
         return particles, weights
@@ -1007,10 +1008,15 @@ class PFC:
                     particles[i] = line_search(m, particle, self.c)
                     weights[i] *= self.q(self.h(particles[i]), self.R).pdf(y)
         else:
-            # If mean doesn't satisfy the constraint, find a new point on the line between last_m and each particle
             for i, particle in enumerate(particles):
-                particles[i] = line_search(last_m, particle, self.c)
+                particles[i] = particles[i]
                 weights[i] *= self.q(self.h(particles[i]), self.R).pdf(y)
+                
+        # Normalize the weights
+        weights += 1.e-300
+        weights /= np.sum(weights)
+                
+        return particles, weights
 
     def update_line_search_2(self, y, particles, weights, last_m):
         """
@@ -1038,7 +1044,9 @@ class PFC:
                 particles[i] = line_search(last_m, particle, self.c)
                 weights[i] *= self.q(self.h(particles[i]), self.R).pdf(y)      
                 
-        weights /= np.sum(weights)  # Normalize the weights
+        # Normalize the weights
+        weights += 1.e-300
+        weights /= np.sum(weights)
         
         return particles, weights
 
@@ -1078,7 +1086,9 @@ class PFC:
                     particles[i] = line_search(m_tmp, particle, self.c)
                     weights[i] *= self.q(self.h(particles[i]), self.R).pdf(y)
             
-        weights /= np.sum(weights)  # Normalize the weights
+        # Normalize the weights
+        weights += 1.e-300
+        weights /= np.sum(weights)
         
         return particles, weights
     
@@ -1098,7 +1108,9 @@ class PFC:
             else:
                 weights[i] *= 0  # Reject the particle
                 
-        weights /= np.sum(weights)  # Normalize the weights
+        # Normalize the weights
+        weights += 1.e-300
+        weights /= np.sum(weights)
         
         return particles, weights
     
