@@ -30,6 +30,9 @@ class StateSpaceModel:
     def get_linear_model(self):
         return self.Q, self.R, self.A, self.H
     
+    def get_linear_model_function(self):
+        return self.Q, self.R, self.f_linear, self.h_linear
+    
     def get_nonlinear_model(self):
         return self.Q, self.R, self.f, self.h
     
