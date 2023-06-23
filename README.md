@@ -60,6 +60,7 @@ Contains illustrative animations of the methods used.
 #### demos
 
 - normal.ipynb: Demonstration of the standard Kalman filter and the RTS smoother
+  ![](./animation/kalman_filer.gif)
 - extended.ipynb: Demonstration of the extended Kalman filter and the extended RTS smoother
 - unscented.ipynb: Demonstration of the unscented Kalman filter and the unscented RTS smoother
 - particle.ipynb: Demonstration of the particle filter
