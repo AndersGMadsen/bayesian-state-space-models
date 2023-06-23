@@ -9,6 +9,18 @@ understanding of advanced Bayesian methods for state-space models. It is offered
 the spring semester and extends to 5.0 ECTS credits over a three-week period in June. The examination is a
 hand-in of the GitHub repository and an oral presentation of developed content.
 
+## Learning objectives
+
+A student who has met the objectives of the course will be able to
+
+1. Understand, implement, and analyze Extended and Unscented Kalman Filters.
+2. Understand, implement, and analyze Extended and Unscented Rauch-Tung-Striebel (RTS) methods.
+3. Understand, implement, and analyze Particle Filtering and Smoothing algorithms.
+4. Maintain a professional codebase with version control practices.
+5. Create visualizations to effectively communicate the applied methods.
+6. Evaluate the implemented methods in practical, real-world scenarios.
+7. Investigate different solutions for handling constrained continuous states.
+
 ## Installation
 
 Clone the repository and run "pip install -r requirements.txt" to install dependencies
@@ -26,7 +38,10 @@ Here is a high-level overview of the file structure in this repository:
 │   ├── extended.ipynb
 │   ├── unscented.ipynb
 │   ├── particle.ipynb
-│   └── parzen.ipynb
+│   ├── number_particles.ipynb
+│   ├── measure_noise_illustration.ipynb
+│   ├── parzen.ipynb
+│   └── tracks.ipynb
 ├── examples
 │   ├── sampling.ipynb
 │   ├── resampling.ipynb
@@ -41,6 +56,7 @@ Here is a high-level overview of the file structure in this repository:
 │   ├── plots.py
 │   ├── state_space_model.py
 │   ├── systems.py
+│   ├── utils.py
 │   └── vehicle_simulation.py
 ├── .gitignore
 ├── Constrained_Notebook.ipynb
@@ -60,10 +76,17 @@ Contains illustrative animations of the methods used.
 #### demos
 
 - normal.ipynb: Demonstration of the standard Kalman filter and the RTS smoother
+- **Animation of the standard Kalman filter followed by RTS:**
+![](./animations/kalman_filter.gif)
 - extended.ipynb: Demonstration of the extended Kalman filter and the extended RTS smoother
 - unscented.ipynb: Demonstration of the unscented Kalman filter and the unscented RTS smoother
 - particle.ipynb: Demonstration of the particle filter
 - parzen.ipynb: Demonstration of the Parzen particle filter
+- **Animation of the Parzen Particle Filter:**
+![](./animations/parzen_filter.gif)
+- number_particles.ipynb: Experiment MSE vs. number of particles
+- measurement_noise_illustration.ipynb: demo of how different methods work with different measurements distributions.
+- tracks.ipynb: Shows the tracks used in the project.
 
 #### examples
 
@@ -73,7 +96,7 @@ Contains illustrative animations of the methods used.
 
 #### output
 
-Contains data from the MPC trajectory
+Contains data from the MPC trajectory and experiments
 
 #### literature
 - Bayesian Filtering and Smoothing, Simo Sarkka
@@ -88,11 +111,22 @@ Contains data from the MPC trajectory
 - plots.py: contains functions rgba_to_rgb, conf_ellipse, plot_trajectory, as well as visualize_filter and visualize_filter_and_smoother. Contains also classes PlotAnimation and PlotParzenAnimation + show_animations function.
 - state_space_model.py: contains class for the state space model used to describe the driving car. The Dynamics come from Ex. 4.3 of Bayesian Filtering and Smoothing. Information of both a linear and a nonlinear system can be extracted.
 - systems.py: contains classes used to generate the systems (CarTrajectoryLinear, CarTrajectoryNonLinear, and MPCTrajectory). Information from the state space model can or cannot be used to generate the system. Contains also functions to generate specific tracks (track_example1, track_example2, and track_example3)
-- utils.py: contains functions make_constraint, point_in_polygon, line_search, and nearest_point
+- utils.py: contains functions make_constraint, point_in_polygon, line_search, and nearest_point, as well as functions used in the unscented transformation
 - vehicle_simulation: contains function for the car simulation, that is, function plot_car, and classes Vehicle, MPC, and Simulation
 
+### Filtering_Notebook
+
+Explainer notebook that goes through the theory of KF, RTS, EKF, UKF, PF (and PPF), and provides demonstration in forms of plots and animations of the methods.
+
+### Constraint_Notebook
+
+Explainer notebook that goes through the problem of constraining a state space model, and provides demonstration of different formulations as well as illustrations.
 
 
 ## Usage
 
 This project is meant as an introduction as well as an exploration of existing Bayesian and Monte Carlo methods for filtering and smoothing accompanied with illustrative examples. Novel methods such as constrained particle filtering and constrained UKF are also presented and discussed.
+
+## License
+
+MIT License

@@ -804,7 +804,7 @@ class PPF:
     
     
     
-class PF_CONSTRAINED:
+class PFC:
     """
     Class to implement Particle Filter constrained method. 
     This class is designed to solve the problem of filtering 
@@ -865,15 +865,15 @@ class PF_CONSTRAINED:
 
         # Select the method for handling constraints
         if self.constrained_method == 'line':
-            update = self.update_line_search
+            self.update = self.update_line_search
         elif self.constrained_method == 'line2':
-            update = self.update_line_search2
+            self.update = self.update_line_search_2
         elif self.constrained_method == 'nearest':
-            update = self.update_nearest_point
+            self.update = self.update_line_search_nearest
         elif self.constrained_method == 'accept_reject':
-            update = self.update_accept_reject
+            self.update = self.update_accept_reject
         elif self.constrained_method == 'none':
-            update = self.update
+            self.update = self.update_unconstrained
         else:
             raise ValueError('Unknown constrained method')
 
@@ -940,7 +940,7 @@ class PF_CONSTRAINED:
             
         return particles, weights
     
-    def update(self, y, particles, weights, last_m):
+    def update_unconstrained(self, y, particles, weights, last_m):
         """
         Update the particles and weights based on the observation.
 
@@ -967,6 +967,7 @@ class PF_CONSTRAINED:
             weights[i] *= mvn(self.h(particle), self.R).pdf(y)
 
         # Normalize the weights
+        weights += 1.e-300
         weights /= np.sum(weights)
 
         return particles, weights
@@ -1007,49 +1008,15 @@ class PF_CONSTRAINED:
                     particles[i] = line_search(m, particle, self.c)
                     weights[i] *= self.q(self.h(particles[i]), self.R).pdf(y)
         else:
-            # If mean doesn't satisfy the constraint, find a new point on the line between last_m and each particle
             for i, particle in enumerate(particles):
-                particles[i] = line_search(last_m, particle, self.c)
+                particles[i] = particles[i]
                 weights[i] *= self.q(self.h(particles[i]), self.R).pdf(y)
-
-    def update_line_search(self, y, particles, weights, last_m):
-        """
-        Update the particles and weights using line search method.
-
-        Parameters
-        ----------
-        y: ndarray
-            The current observation.
-        particles: ndarray
-            The current particles.
-        weights: ndarray
-            The current weights.
-        last_m: ndarray
-            The last average of particles.
-
-        Returns
-        -------
-        This method does not return anything. It directly updates particles and weights.
-        """
-        
-        m = np.average(particles, weights=weights, axis=0) # Get the weighted average of the particles
-        
-        # Check if average particle position is within the constraint
-        if self.c(m):
-            for i, particle in enumerate(particles):
-                # If the individual particle is within the constraint
-                if self.c(particle):
-                    particles[i] = particle
-                    weights[i] *= self.q(self.h(particles[i]), self.R).pdf(y)
-                else:
-                    # Adjust particle position based on line search if it is outside the constraint
-                    particles[i] = line_search(m, particle, self.c)
-                    weights[i] *= self.q(self.h(particles[i]), self.R).pdf(y)
-        else:
-            # If average particle position is not within the constraint
-            for i, particle in enumerate(particles):
-                particles[i] = line_search(last_m, particle, self.c)
-                weights[i] *= self.q(self.h(particles[i]), self.R).pdf(y)
+                
+        # Normalize the weights
+        weights += 1.e-300
+        weights /= np.sum(weights)
+                
+        return particles, weights
 
     def update_line_search_2(self, y, particles, weights, last_m):
         """
@@ -1077,7 +1044,9 @@ class PF_CONSTRAINED:
                 particles[i] = line_search(last_m, particle, self.c)
                 weights[i] *= self.q(self.h(particles[i]), self.R).pdf(y)      
                 
-        weights /= np.sum(weights)  # Normalize the weights
+        # Normalize the weights
+        weights += 1.e-300
+        weights /= np.sum(weights)
         
         return particles, weights
 
@@ -1117,11 +1086,13 @@ class PF_CONSTRAINED:
                     particles[i] = line_search(m_tmp, particle, self.c)
                     weights[i] *= self.q(self.h(particles[i]), self.R).pdf(y)
             
-        weights /= np.sum(weights)  # Normalize the weights
+        # Normalize the weights
+        weights += 1.e-300
+        weights /= np.sum(weights)
         
         return particles, weights
     
-    def update_accept_reject(self, y, particles, weights, m):
+    def update_accept_reject(self, y, particles, weights, last_m):
         """
         Update the particles and weights using an accept-reject method.
 
@@ -1137,7 +1108,9 @@ class PF_CONSTRAINED:
             else:
                 weights[i] *= 0  # Reject the particle
                 
-        weights /= np.sum(weights)  # Normalize the weights
+        # Normalize the weights
+        weights += 1.e-300
+        weights /= np.sum(weights)
         
         return particles, weights
     

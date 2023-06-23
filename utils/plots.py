@@ -4,10 +4,13 @@ from matplotlib import pyplot as plt
 from matplotlib.patches import Ellipse
 import matplotlib.animation as animation
 from IPython.display import display, HTML, Image
+from matplotlib.cm import get_cmap
+from matplotlib.collections import LineCollection
+from scipy.interpolate import interp1d
 
 from tqdm.auto import tqdm
 from scipy.linalg import eigh
-from scipy.stats import chi2, norm
+from scipy.stats import chi2, norm, multivariate_normal
 
 cornflowerblue_alpha = (0.39215686274509803, 0.5843137254901961, 0.9294117647058824, 0.3)
 
@@ -240,6 +243,112 @@ class PlotAnimation:
         plt.close()
 
 
+class PlotParzenAnimation:
+
+    def __init__(self, states, measurements, state_estimates, particle_history, particle_cov_history, name="animation"):
+        self.states = states
+        self.measurements = measurements
+        self.state_estimates = state_estimates
+        self.particle_history = particle_history
+        self.particle_cov_history = particle_cov_history
+        self.name = name
+
+        self.fig = plt.figure(figsize=(16, 6))
+        self.gs = self.fig.add_gridspec(
+            2, 2, width_ratios=(4, 1), height_ratios=(1, 4),
+            left=0.1, right=0.9, bottom=0.1, top=0.9,
+            wspace=0.05, hspace=0.05
+        )
+
+        self.ax = self.fig.add_subplot(self.gs[1, 0])
+        self.ax.plot(states[0, 0], states[0, 1], 'x', color='k', label="Start")
+        self.ax.plot(states[:, 0], states[:, 1], '--', color='r', label="True trajectory")
+
+        self.filter_points, = self.ax.plot([], [], '.', color='orange',label="Noisy observations (original)")
+
+        self.ax.hlines(1, 1, 45, color='k', linestyle='solid', linewidth=1)
+        self.ax.hlines(5, 1, 40, color='k', linestyle='solid', linewidth=1)
+        self.ax.vlines(45, 1, 20, color='k', linestyle='solid', linewidth=1)
+        self.ax.vlines(40, 5, 20, color='k', linestyle='solid', linewidth=1)
+
+        self.ax_histx = self.fig.add_subplot(self.gs[0, 0], sharex=self.ax)
+        self.ax_histy = self.fig.add_subplot(self.gs[1, 1], sharey=self.ax)
+        self.line, = self.ax.plot([], [], '-', color='black', label="Estimated trajectory", alpha=0.5)
+        self.mse_text = self.fig.text(0.75, 0.75, '', transform=self.fig.transFigure, fontsize=12)
+
+        self.ax_histx.tick_params(axis="x", labelbottom=False)
+        self.ax_histy.tick_params(axis="y", labelleft=False)
+
+        self.contourf = None
+
+    def update_trajectory(self, frame):
+        self.line.set_xdata(self.state_estimates[:frame, 0])
+        self.line.set_ydata(self.state_estimates[:frame, 1])
+
+        if frame > 0:
+            mse = np.mean((self.states[:frame, :2] - self.state_estimates[:frame, :2]) ** 2)
+            self.mse_text.set_text(f'MSE: {mse:.2f}')
+
+    def update_histogram(self, frame):
+        self.ax_histx.clear()
+        self.ax_histy.clear()
+        self.ax_histx.set_ylim(0, .5)
+        self.ax_histy.set_xlim(0, .5)
+
+        X, Y = np.linspace(-5, 50, 100), np.linspace(-5, 50, 100)
+
+        pdf_x = sum([norm.pdf(X, loc=mean[0], scale=np.sqrt(cov[0, 0])) for mean, cov in zip(self.particle_history[frame], self.particle_cov_history[frame])])
+        pdf_y = sum([norm.pdf(Y, loc=mean[1], scale=np.sqrt(cov[1, 1])) for mean, cov in zip(self.particle_history[frame], self.particle_cov_history[frame])])
+        #print(particle_history[frame][:,0].mean(), particle_history[frame][:,1].mean())
+
+        pdf_x = pdf_x / np.sum(pdf_x)
+        pdf_y = pdf_y / np.sum(pdf_y)
+
+        self.ax_histx.plot(X, pdf_x)
+        self.ax_histy.plot(pdf_y, Y)
+
+
+    def init(self):
+        self.ax.set_xlim(int(np.min(self.measurements[:, 0]) - 5), int(np.max(self.measurements[:, 0] + 5)))
+        self.ax.set_ylim(int(np.min(self.measurements[:, 1]) - 5), int(np.max(self.measurements[:, 1] + 5)))
+        self.ax_histx.set_ylim(0, .5)
+        self.ax_histy.set_xlim(0, .5)
+        return self.ax,
+
+    def update_filter(self, frame):
+
+        self.update_trajectory(frame)
+        self.update_histogram(frame)
+                
+        X, Y = np.meshgrid(np.linspace(-5, 50, 100), np.linspace(-5, 50, 100))
+        pos = np.empty(X.shape + (2,))
+        pos[:, :, 0] = X
+        pos[:, :, 1] = Y
+
+        pdf = sum([multivariate_normal.pdf(pos, mean=mean[:2], cov=cov[:2, :2]) for mean, cov in zip(self.particle_history[frame], self.particle_cov_history[frame])])
+
+        self.contourf = self.ax.contourf(X, Y, pdf, levels=10, cmap='Blues')
+
+        self.filter_points.set_data(self.measurements[:frame, 0], self.measurements[:frame, 1])
+        
+        return self.ax,
+
+    def update(self, frame):
+        
+        ax = self.update_filter(frame)
+
+        return ax,
+
+    def animate(self):
+        with tqdm(total=len(self.state_estimates)) as pbar:
+            ani = animation.FuncAnimation(
+                self.fig, self.update, frames=range(0, len(self.state_estimates)), init_func=self.init
+            )
+            ani.save(f'{self.name}.gif', writer='Pillow', fps=10, progress_callback=lambda i, n: pbar.update())
+
+        plt.close()
+
+
 def show_animation(trajectory, gif_path="animations/car_trajectory"):
     def display_animation(gif_path, style='style="max-width:100%;"'):
         display(HTML(f'<img src="{gif_path}" {style}>'))
@@ -338,4 +447,67 @@ def illustrate_unscented_transform(ut_dict, xs, ys, xs_nl, ys_nl, title='title')
     fig.suptitle(title, fontsize=24)
 
     plt.tight_layout()
+    plt.show()
+    
+    
+
+def plot_particle_solution(states, state_estimates, measurements, particle_history, line_segments):
+    min_x, max_x = np.inf, -np.inf
+    min_y, max_y = np.inf, -np.inf
+    
+    for line_segment in line_segments:
+        min_x = np.min([min_x, np.min(line_segment[:, 0])])
+        max_x = np.max([max_x, np.max(line_segment[:, 0])])
+        min_y = np.min([min_y, np.min(line_segment[:, 1])])
+        max_y = np.max([max_y, np.max(line_segment[:, 1])])
+
+    min_x = np.min([min_x, np.min(states[:, 0]), np.min(measurements[:, 0])])
+    max_x = np.max([max_x, np.max(states[:, 0]), np.max(measurements[:, 0])])
+    min_y = np.min([min_y, np.min(states[:, 1]), np.min(measurements[:, 1])])
+    max_y = np.max([max_y, np.max(states[:, 1]), np.max(measurements[:, 1])])
+    
+    
+    n = len(states)
+    fig, ax = plt.subplots(1, 1, figsize=(16, 6))
+
+    # Plot particle history
+    blues = get_cmap('Blues')(np.linspace(0.2, 1.0, n))
+    for k in range(n):
+        ax.scatter(particle_history[k, :, 0], particle_history[k, :, 1], s=1, color=blues[k])
+
+    points = state_estimates[:, :2]
+    points = interp1d(np.arange(n), points, axis=0)(np.linspace(0, n - 1, 10000))
+    points = points.reshape(-1, 1, 2)
+    segments = np.concatenate([points[:-1], points[1:]], axis=1)
+
+    lc1_color = get_cmap('Greys')(np.linspace(0.5, 1, len(segments)))[::-1]
+    lc1 = LineCollection(segments, colors=lc1_color, linewidths=4, linestyles='solid')
+
+    lc2_color = get_cmap('Blues')(np.linspace(0.2, 1, len(segments)))[::-1]
+    lc2 = LineCollection(segments, colors=lc2_color, linewidths=1.5, linestyles='solid', label='Estimated')
+
+    ax.add_collection(lc1)
+    ax.add_collection(lc2)
+
+    greys = get_cmap('Greys')(np.linspace(0.5, 1, n))[::-1]
+    ax.scatter(measurements[:, 0], measurements[:, 1], s=15, c=greys, marker='^')
+
+    blues = get_cmap('Blues')(np.linspace(0.2, 1, n))[::-1]
+    ax.scatter(measurements[:, 0], measurements[:, 1], s=7.5, c=blues, marker='^')
+    
+    ax.plot(states[:, 0], states[:, 1], color='k', linewidth=2, linestyle='solid', label='True')
+
+    for line_segment in line_segments:
+        ax.plot(line_segment[:, 0], line_segment[:, 1], color='k', linewidth=2, linestyle='solid')
+
+    ax.set_xlim(min_x - 3, max_x + 3)
+    ax.set_ylim(min_y - 3, max_y + 3)
+    ax.set_aspect('equal')
+    
+    # Caluclate and show MSE
+    mse = np.mean(np.linalg.norm(states[:, :2] - state_estimates[:, :2], axis=1))
+    ax.text(0.05, 0.95, f'MSE: {mse:.4f}', transform=ax.transAxes, fontsize=14, verticalalignment='top')
+
+    ax.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), fancybox=True, shadow=True, ncol=5)
+
     plt.show()
