@@ -26,7 +26,10 @@ Here is a high-level overview of the file structure in this repository:
 │   ├── extended.ipynb
 │   ├── unscented.ipynb
 │   ├── particle.ipynb
-│   └── parzen.ipynb
+│   ├── number_particles.ipynb
+│   ├── measure_noise_illustration.ipynb
+│   ├── parzen.ipynb
+│   └── tracks.ipynb
 ├── examples
 │   ├── sampling.ipynb
 │   ├── resampling.ipynb
@@ -41,6 +44,7 @@ Here is a high-level overview of the file structure in this repository:
 │   ├── plots.py
 │   ├── state_space_model.py
 │   ├── systems.py
+│   ├── utils.py
 │   └── vehicle_simulation.py
 ├── .gitignore
 ├── Constrained_Notebook.ipynb
