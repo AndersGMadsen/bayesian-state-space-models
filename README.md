@@ -84,7 +84,7 @@ Contains illustrative animations of the methods used.
 
 #### output
 
-Contains data from the MPC trajectory
+Contains data from the MPC trajectory and experiments
 
 #### literature
 - Bayesian Filtering and Smoothing, Simo Sarkka
