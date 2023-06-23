@@ -60,11 +60,14 @@ Contains illustrative animations of the methods used.
 #### demos
 
 - normal.ipynb: Demonstration of the standard Kalman filter and the RTS smoother
-  ![](./animation/kalman_filer.gif)
+- **Animation of the standard Kalman filter followed by RTS:**
+![](./animations/kalman_filter.gif)
 - extended.ipynb: Demonstration of the extended Kalman filter and the extended RTS smoother
 - unscented.ipynb: Demonstration of the unscented Kalman filter and the unscented RTS smoother
 - particle.ipynb: Demonstration of the particle filter
 - parzen.ipynb: Demonstration of the Parzen particle filter
+- **Animation of the Parzen Particle Filter:**
+![](./animations/parzen_filter.gif)
 - number_particles.ipynb: Experiment MSE vs. number of particles
 - measurement_noise_illustration.ipynb: demo of how different methods work with different measurements distributions.
 - tracks.ipynb: Shows the tracks used in the project.
