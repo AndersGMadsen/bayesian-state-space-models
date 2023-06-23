@@ -1,9 +1,6 @@
 import numpy as np
 from numpy.random import multivariate_normal
-
 from scipy.linalg import cholesky, sqrtm
-from scipy.stats.mstats import mquantiles
-
 
 
 def make_constraint(polygon):
