@@ -1,4 +1,4 @@
-# SC: Advanced Bayesian Methods for State Space Models
+# Advanced Bayesian Methods for State Space Models 
 
 Anders Gjølbye Madsen (s194260) and William Lehn-Schiøler (s194272)
 
@@ -17,16 +17,6 @@ Clone the repository and run "pip install -r requirements.txt" to install depend
 
 Here is a high-level overview of the file structure in this repository:
 
-
-Certainly! Here's a beautifully formatted layout for the file structure in your README.md file:
-
-markdown
-Copy code
-# bayesian-state-space-models
-
-A project on Bayesian state space models.
-
-## File Structure
 
 ```
 .
@@ -101,3 +91,8 @@ Contains data from the MPC trajectory
 - utils.py: contains functions make_constraint, point_in_polygon, line_search, and nearest_point
 - vehicle_simulation: contains function for the car simulation, that is, function plot_car, and classes Vehicle, MPC, and Simulation
 
+
+
+## Usage
+
+This project is meant as an introduction as well as an exploration of existing Bayesian and Monte Carlo methods for filtering and smoothing accompanied with illustrative examples. Novel methods such as constrained particle filtering and constrained UKF are also presented and discussed.
