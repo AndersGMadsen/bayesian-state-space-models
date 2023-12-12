@@ -7,6 +7,7 @@ from tqdm.auto import tqdm
 from matplotlib import animation
 from os.path import exists
 import pickle
+import casadi
 
 class CarTrajectoryLinear:
     """Trajectory class using a linear state space model to generate a trajectory for the vehicle."""
@@ -66,7 +67,7 @@ class CarTrajectoryNonLinear:
 class MPCTrajectory:
     """Trajectory class using Model Predictive Control to generate a trajectory for the vehicle."""    
     
-    def __init__(self, x_points, y_points, line_segments, noise_dist = 'mvn', r1 = 1, r2 = 1, sp_reduction = True, savepath=None):
+    def __init__(self, x_points, y_points, line_segments, linearity, noise_dist = 'mvn', r1 = 1, r2 = 1, sp_reduction = True, savepath=None):
 
         self.noise_dist = noise_dist
 
@@ -74,6 +75,8 @@ class MPCTrajectory:
         self.y_points = y_points
 
         self.line_segments = line_segments
+
+        self.linearity = linearity # 'linear' or 'nonlinear'
         
         self._states = None
         self._measurements = None
@@ -88,6 +91,24 @@ class MPCTrajectory:
         
         self.sp_reduction = sp_reduction
         self.savepath = savepath
+
+    def f_linear(self, x, dt=0.1):
+        A = np.array([[1, 0, dt, 0],
+                        [0, 1, 0, dt],
+                        [0, 0, 1, 0],
+                        [0, 0, 0, 1]])
+        
+        return (A @ x.T).T
+        
+    def f_nonlinear(self, x, freq, amp):
+        return np.array([amp * np.sin(freq * x.T[0]), amp * np.sin(freq * x.T[1]), np.zeros(x.shape[0]), np.zeros(x.shape[0])]).T
+        #return 0.1 * x**2
+
+    def f(self, x, linearity, freq=np.pi/2, amp=0.2):
+        if linearity == 'linear':
+            return self.f_linear(x)
+        elif linearity == 'nonlinear':
+            return self.f_linear(x) + self.f_nonlinear(x, freq, amp)
 
     @property
     def states(self):
@@ -108,8 +129,9 @@ class MPCTrajectory:
                     tmp = {'states': self._states, 'states_hist': self.states_hist, 'controls_hist': self.controls_hist}
                     with open(self.savepath, 'wb') as file:
                         pickle.dump(tmp, file)
-                    
-        return self._states
+
+        return self.f(self._states, linearity=self.linearity)
+        #return self._states
 
     @property
     def measurements(self):
@@ -168,17 +190,31 @@ class MPCTrajectory:
         return np.c_[x, y, dx, dy]
 
     # Measurement transition function
-    def h(self, x):
+    def h_linear(self, x):
         H = np.array([[1, 0, 0, 0],
-                        [0, 1, 0, 0]])
+                      [0, 1, 0, 0]])
+        
+        return np.dot(x, H.T)
+    
+    def h_nonlinear(self, x):
+        return np.array([1.0 * np.sin(x[:, 1]), -1.0 * np.cos(x[:, 0])]).T
+
+    def h(self, x):
         
         if x.ndim == 1:
-            x = x.reshape(1, -1)     
-            out = np.dot(x, H.T) + np.array([1.0 * np.sin(x[:, 1]), -1.0 * np.cos(x[:, 0])]).T
+            x = x.reshape(1, -1)   
+
+            if self.linearity == 'linear':
+                out = self.h_linear(x)
+            elif self.linearity == 'nonlinear':  
+                out = self.h_linear(x) + self.h_nonlinear(x)
             out = out.flatten()
             
         else:
-            out = np.dot(x, H.T) + np.array([1.0 * np.sin(x[:, 1]), -1.0 * np.cos(x[:, 0])]).T
+            if self.linearity == 'linear':
+                out = self.h_linear(x)
+            elif self.linearity == 'nonlinear':  
+                out = self.h_linear(x) + self.h_nonlinear(x)
         
         return out
     
@@ -215,10 +251,12 @@ class MPCTrajectory:
         
         return min_x, max_x, min_y, max_y
     
-    def plot(self):
+    def plot(self, ax=None, extra=None):
         min_x, max_x, min_y, max_y = self.get_bounding_box()      
-        ratio = (max_x - min_x + 6) / (max_y - min_y + 6)        
-        fig, ax = plt.subplots(1, 1, figsize=(ratio*4, 4))
+        ratio = (max_x - min_x + 6) / (max_y - min_y + 6)   
+
+        if ax is None:     
+            fig, ax = plt.subplots(1, 1, figsize=(ratio*4, 4))
         
         ax.plot(self.measurements[:, 0], self.measurements[:, 1], 'o', label='Measurements', markersize=3)
         ax.plot(self.x_points, self.y_points, 'x', label='Waypoints', markersize=10)
@@ -226,8 +264,11 @@ class MPCTrajectory:
         
         for line_segment in self.line_segments:
             ax.plot(line_segment[:, 0], line_segment[:, 1], 'k-', label='Boundaries', linewidth=1)
-            
 
+        if extra is not None:
+            circle_to_plot = extra
+            ax.add_patch(circle_to_plot)
+            
         ax.set_xlim(min_x - 3, max_x + 3)
         ax.set_ylim(min_y - 3, max_y + 3)
         ax.set_aspect('equal')
@@ -319,6 +360,24 @@ def track_example3(seed=None):
 
     y = np.repeat(2.5, 6) + np.random.normal(0, 0.25, 6)
     y = np.clip(y, 1, 4)
+
+    x_coords = x
+    y_coords = y
+
+    return x_coords, y_coords, line_segmentsø
+
+def track_example4(seed=None):
+    
+    if seed:
+        np.random.seed(seed)
+
+    line_segments = [np.array([(0,0), (0,5), (10, 5), (10, 10), (35, 10), (35, 5), (45,5), (45,0), (35,0), (35, -5), (10, -5), (10, 0), (0,0)])]
+
+    x = np.array([2, 8, 12, 18, 22.5, 27, 31, 39, 44])
+    y = np.array([2.5, 2, 4, 5, 6, 5, 4, 2, 2.5])
+
+    #y = y + np.random.normal(0, 0.25, 7)
+    y = np.clip(y, 1, 10)
 
     x_coords = x
     y_coords = y

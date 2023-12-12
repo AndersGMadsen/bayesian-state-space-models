@@ -41,7 +41,7 @@ def plot_trajectory(ax, states, cov_estimates, label, color='cornflowerblue', al
         conf_ellipse(ax, states[i, :2,], cov_estimates[i, :2, :2], alpha=alpha)
 
 
-def visualize_filter(states, measurements, state_estimates, cov_estimates, particle_history=None, title="Title"):
+def visualize_filter(states, measurements, state_estimates, cov_estimates, extra=None, particle_history=None, title="Title"):
 
         fig, ax = plt.subplots(1, 1, figsize=(16, 4), sharey=True)
 
@@ -61,10 +61,21 @@ def visualize_filter(states, measurements, state_estimates, cov_estimates, parti
         ax.text(1.00, 1.05, "MSE: {:.2f}".format(np.mean((states[:, :2] - state_estimates[:, :2])**2)),
                 horizontalalignment='right', verticalalignment='top', transform=ax.transAxes)
 
-        ax.hlines(1, 1, 45, color='k', linestyle='solid', linewidth=1)
-        ax.hlines(5, 1, 40, color='k', linestyle='solid', linewidth=1)
-        ax.vlines(45, 1, 20, color='k', linestyle='solid', linewidth=1)
-        ax.vlines(40, 5, 20, color='k', linestyle='solid', linewidth=1)
+        ax.hlines(0, 0, 10, color='k', linestyle='solid', linewidth=1)
+        ax.hlines(5, 0, 10, color='k', linestyle='solid', linewidth=1)
+        ax.hlines(5, 35, 45, color='k', linestyle='solid', linewidth=1)
+        ax.hlines(10, 10, 35, color='k', linestyle='solid', linewidth=1)
+        ax.hlines(0, 35, 45, color='k', linestyle='solid', linewidth=1)
+        ax.hlines(-5, 10, 35, color='k', linestyle='solid', linewidth=1)
+
+        ax.vlines(10, -5, 0, color='k', linestyle='solid', linewidth=1)
+        ax.vlines(35, 5, 10, color='k', linestyle='solid', linewidth=1)
+        ax.vlines(35, -5, 0, color='k', linestyle='solid', linewidth=1)
+        ax.vlines(10, 5, 10, color='k', linestyle='solid', linewidth=1)
+
+        if extra is not None:
+            circle = plt.Circle((22.5, 2.5), 3, color='k', fill=False)
+            ax.add_patch(circle)
 
         ax.set_xlabel('x')
         ax.set_ylabel('y')
@@ -77,7 +88,7 @@ def visualize_filter(states, measurements, state_estimates, cov_estimates, parti
         plt.show()
 
 
-def visualize_filter_and_smoother(states, measurements, state_estimates, cov_estimates, state_estimates_smoothed, cov_estimates_smoothed, particle_history=None, variant=""):
+def visualize_filter_and_smoother(states, measurements, state_estimates, cov_estimates, state_estimates_smoothed, cov_estimates_smoothed, extra=None, particle_history=None, variant=""):
 
         fig, ax = plt.subplots(1, 2, figsize=(16, 4), sharey=True)
 
@@ -103,10 +114,22 @@ def visualize_filter_and_smoother(states, measurements, state_estimates, cov_est
                 horizontalalignment='right', verticalalignment='top', transform=ax[1].transAxes)
         
         for k in range(2):
-                ax[k].hlines(1, 1, 45, color='k', linestyle='solid', linewidth=1)
-                ax[k].hlines(5, 1, 40, color='k', linestyle='solid', linewidth=1)
-                ax[k].vlines(45, 1, 20, color='k', linestyle='solid', linewidth=1)
-                ax[k].vlines(40, 5, 20, color='k', linestyle='solid', linewidth=1)
+                ax[k].hlines(0, 0, 10, color='k', linestyle='solid', linewidth=1)
+                ax[k].hlines(5, 0, 10, color='k', linestyle='solid', linewidth=1)
+                ax[k].hlines(5, 35, 45, color='k', linestyle='solid', linewidth=1)
+                ax[k].hlines(10, 10, 35, color='k', linestyle='solid', linewidth=1)
+                ax[k].hlines(0, 35, 45, color='k', linestyle='solid', linewidth=1)
+                ax[k].hlines(-5, 10, 35, color='k', linestyle='solid', linewidth=1)
+
+                ax[k].vlines(10, -5, 0, color='k', linestyle='solid', linewidth=1)
+                ax[k].vlines(35, 5, 10, color='k', linestyle='solid', linewidth=1)
+                ax[k].vlines(35, -5, 0, color='k', linestyle='solid', linewidth=1)
+                ax[k].vlines(10, 5, 10, color='k', linestyle='solid', linewidth=1)
+
+                if extra is not None:
+                    circle = plt.Circle((22.5, 2.5), 3, color='k', fill=False)
+                    ax[k].add_patch(circle)
+                
 
                 ax[k].set_xlabel('x')
                 ax[k].set_ylabel('y')

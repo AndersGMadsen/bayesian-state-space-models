@@ -1,5 +1,3 @@
-# Implementation by Anders Gjølbye Madsen
-
 import numpy as np
 from scipy.linalg import cholesky
 from utils.methods import systematic_resampling, residual_resampling, stratified_resampling, sample_from_mixture
