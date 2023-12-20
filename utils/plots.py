@@ -168,10 +168,22 @@ class PlotAnimation:
         self.filter_points, = self.ax.plot([], [], '.', color='orange',label="Noisy observations (original)")
         self.smoother_points, = self.ax.plot([], [], '.', color='red', label="Noisy observations (after smoothing)")
 
-        self.ax.hlines(1, 1, 45, color='k', linestyle='solid', linewidth=1)
-        self.ax.hlines(5, 1, 40, color='k', linestyle='solid', linewidth=1)
-        self.ax.vlines(45, 1, 20, color='k', linestyle='solid', linewidth=1)
-        self.ax.vlines(40, 5, 20, color='k', linestyle='solid', linewidth=1)
+        #self.ax.hlines(1, 1, 45, color='k', linestyle='solid', linewidth=1)
+        #self.ax.hlines(5, 1, 40, color='k', linestyle='solid', linewidth=1)
+        #self.ax.vlines(45, 1, 20, color='k', linestyle='solid', linewidth=1)
+        #self.ax.vlines(40, 5, 20, color='k', linestyle='solid', linewidth=1)
+
+        self.ax.hlines(0, 0, 10, color='k', linestyle='solid', linewidth=1)
+        self.ax.hlines(5, 0, 10, color='k', linestyle='solid', linewidth=1)
+        self.ax.hlines(5, 35, 45, color='k', linestyle='solid', linewidth=1)
+        self.ax.hlines(10, 10, 35, color='k', linestyle='solid', linewidth=1)
+        self.ax.hlines(0, 35, 45, color='k', linestyle='solid', linewidth=1)
+        self.ax.hlines(-5, 10, 35, color='k', linestyle='solid', linewidth=1)
+
+        self.ax.vlines(10, -5, 0, color='k', linestyle='solid', linewidth=1)
+        self.ax.vlines(35, 5, 10, color='k', linestyle='solid', linewidth=1)
+        self.ax.vlines(35, -5, 0, color='k', linestyle='solid', linewidth=1)
+        self.ax.vlines(10, 5, 10, color='k', linestyle='solid', linewidth=1)
 
         self.ax_histx = self.fig.add_subplot(self.gs[0, 0], sharex=self.ax)
         self.ax_histy = self.fig.add_subplot(self.gs[1, 1], sharey=self.ax)
