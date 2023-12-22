@@ -3,6 +3,7 @@ from utils.vehicle_simulation import Vehicle, Simulation, plot_car
 import utils.cubic_spline_planner as cubic_spline_planner
 from scipy.stats import multivariate_normal, multivariate_t
 from matplotlib import pyplot as plt
+from matplotlib.patches import Circle
 from tqdm.auto import tqdm
 from matplotlib import animation
 from os.path import exists
@@ -298,7 +299,9 @@ class MPCTrajectory:
 
             for line_segment in self.line_segments:
                 ax.plot(line_segment[:, 0], line_segment[:, 1], 'k-', label='Boundaries', linewidth=1)
-            
+
+            circle = Circle((22.5, 2.5), 3, color='k', fill=False)
+            ax.add_patch(circle)            
             ax.set_title("Time [s]:" + str(round(t[i], 2)) + ", speed [km/h]:" + str(round(v[i] * 3.6, 2)))
             
             ax.grid(True)
